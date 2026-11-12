@@ -1,0 +1,2047 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="description" content="Finsfree pilot playbook: how an IB's Finsfree bot works, step by step (internal).">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Finsfree Pilot Playbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Shell: the MENA flow dashboard, reused. Dark rail of tabs on the left (it can be hidden), grey stage.
+   Tab 1 is a stack of 16:9 slides (the full journey, then one per stage) drawn on a fixed 1600 x 900 canvas and scaled
+   to fit, so they present well on a big screen. A light page with dark slides, on purpose.
+   Status is an icon on a coloured token: a bolt on soft green for automatic, a person and a bolt on soft blue for
+   partly automatic, a person on red (#CC1042) for manual, and a dashed amber ring for no set owner. */
+:root{
+  --rail:#050A18; --rail-hover:#0B1428; --rail-active:#101A2E; --rail-line:#141C30; --rail-line-2:#1F2B41;
+  --rail-text:#C2D0E2; --rail-muted:#8296B0; --rail-role:#75879F; --rail-faint:#55677F;
+  --stage:#EDEFF2; --ink:#0C1E45; --muted:#6B7484;
+  --btn-bg:#FFFFFF; --btn-line:#D3DAE5; --btn-line-hi:#AEB9CB; --btn-shadow:rgba(10,30,60,.08);
+  --jn-text:#5D687B; --jn-hover:rgba(12,30,69,.06); --jn-on:#FFFFFF; --jn-on-shadow:rgba(10,30,60,.10);
+  --dv-text:#7A8597; --dv-line:#D3D9E3; --frame-sh1:rgba(5,10,24,.30); --frame-sh2:rgba(5,10,24,.14);
+  --blue:#0B5CE0; --blue-hi:#4D9BFF; --blue-soft:#EDF3FE; --green:#12B886;
+  --red-rail:#FF8A8F;
+  --s-ink:#F3F6FF; --s-text:#C3CFEA; --s-muted:#97A8CC; --s-label:#7C93C7;
+  --st-auto:#F3F6FF; --st-partly:#F3F6FF; --st-manual:#F3F6FF; --st-none:#FBBF24;
+  /* status icons: a bolt for automatic (the system does it), a person for manual, both for partly automatic */
+  --ic-auto:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M10.5.8 2.5 9.3h4.7l-1.6 5.9 7.9-8.7H8.9z'/%3E%3C/svg%3E");
+  --ic-manual:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='4.3' r='3.3'/%3E%3Cpath d='M1.6 15.4c0-3.8 2.9-6.3 6.4-6.3s6.4 2.5 6.4 6.3z'/%3E%3C/svg%3E");
+  --ic-partly:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 16'%3E%3Ccircle cx='6.4' cy='4.3' r='3.2'/%3E%3Cpath d='M.4 15.4c0-3.7 2.7-6.2 6-6.2s6 2.5 6 6.2z'/%3E%3Cpath d='M20.2.8 14 9.3h3.8l-1.3 5.9 6.6-8.7h-3.8z'/%3E%3C/svg%3E");
+  --f:'Plus Jakarta Sans','Helvetica Neue',Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --stage:#0A0F1D; --ink:#E6ECFA; --muted:#97A8CC;
+  --btn-bg:#121B33; --btn-line:#26324F; --btn-line-hi:#3B4B72; --btn-shadow:rgba(0,0,0,.35);
+  --jn-text:#97A8CC; --jn-hover:rgba(255,255,255,.06); --jn-on:#1B2747; --jn-on-shadow:rgba(0,0,0,.35);
+  --dv-text:#8292B5; --dv-line:#1E2943; --frame-sh1:rgba(0,0,0,.55); --frame-sh2:rgba(0,0,0,.35);
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --stage:#0A0F1D; --ink:#E6ECFA; --muted:#97A8CC;
+  --btn-bg:#121B33; --btn-line:#26324F; --btn-line-hi:#3B4B72; --btn-shadow:rgba(0,0,0,.35);
+  --jn-text:#97A8CC; --jn-hover:rgba(255,255,255,.06); --jn-on:#1B2747; --jn-on-shadow:rgba(0,0,0,.35);
+  --dv-text:#8292B5; --dv-line:#1E2943; --frame-sh1:rgba(0,0,0,.55); --frame-sh2:rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--stage);color:var(--ink);font-family:var(--f);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:70;background:var(--rail)}
+button{font:inherit}
+
+/* ---- rail ---- */
+.ui-shell{display:flex;min-height:100vh}
+.ui-rail{width:268px;flex:0 0 268px;background:var(--rail);color:#FFFFFF;position:sticky;top:env(safe-area-inset-top,0px);align-self:flex-start;height:calc(100vh - env(safe-area-inset-top,0px));overflow-y:auto;display:flex;flex-direction:column;scrollbar-width:thin;scrollbar-color:#1F2B41 transparent;transition:margin-left .32s cubic-bezier(.2,.7,.3,1),visibility 0s linear 0s}
+.ui-rail-head{position:relative;padding:26px 22px 20px max(22px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--rail-line)}
+.ui-rail-head img{display:block;width:132px;height:33px}
+.ui-hide{position:absolute;top:24px;right:14px;width:32px;height:32px;display:grid;place-items:center;padding:0;border-radius:8px;border:1px solid var(--rail-line-2);background:transparent;color:var(--rail-muted);cursor:pointer;transition:background-color .15s ease,color .15s ease}
+.ui-hide:hover{background:var(--rail-hover);color:#FFFFFF}
+.ui-hide:focus-visible{outline:2px solid var(--blue-hi);outline-offset:2px}
+.ui-hide svg{width:15px;height:15px}
+.ui-rail-region{font-size:13px;font-weight:600;color:#FFFFFF;padding-top:20px;letter-spacing:.01em}
+.ui-rail-sub{font-size:11px;line-height:1.6;color:var(--rail-muted);padding-top:4px}
+.ui-prog-label{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--rail-faint);padding-top:18px}
+.ui-prog{margin-top:9px;padding:10px 12px 12px;background:var(--rail-hover);border:1px solid var(--rail-line-2);border-radius:8px}
+.ui-prog-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.ui-prog-n{font-size:16px;font-weight:700;color:#FFFFFF;font-variant-numeric:tabular-nums}
+.ui-prog-s{font-size:11px;color:var(--rail-muted)}
+.ui-prog-bar{height:4px;border-radius:4px;background:#1A2740;margin-top:9px;overflow:hidden}
+.ui-prog-bar i{display:block;height:100%;width:0;background:var(--green)}
+.ui-list{padding:14px 12px 20px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:2px}
+.ui-item{display:block;width:100%;text-align:left;background:transparent;border:0;border-left:2px solid transparent;border-radius:0 6px 6px 0;padding:11px 14px 12px;cursor:pointer;color:inherit;transition:background-color .12s ease}
+.ui-item:hover{background:var(--rail-hover)}
+.ui-item.is-active{background:var(--rail-active);border-left-color:var(--blue)}
+.ui-item:focus-visible{outline:2px solid var(--blue-hi);outline-offset:-2px}
+.ui-item-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ui-item-name{font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--rail-text)}
+.ui-item.is-active .ui-item-name{color:#FFFFFF}
+.ui-item-role{display:block;font-size:11px;line-height:1.5;color:var(--rail-role);padding-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ui-item.is-active .ui-item-role{color:#A7B8CE}
+.ui-item.is-pending{cursor:default;opacity:.46}
+.ui-item.is-pending:hover{background:transparent}
+.ui-chip{display:inline-block;flex:0 0 auto;background:var(--blue-soft);border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--blue);padding:2px 7px;font-variant-numeric:tabular-nums}
+.ui-chip.is-plan{background:transparent;border:1px solid #2C3D57;color:var(--rail-muted)}
+.ui-chip.is-muted{background:transparent;border:1px solid var(--rail-line-2);color:#63758E}
+.ui-chip.is-red{background:rgba(255,100,105,.15);color:var(--red-rail)}
+.ui-group{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--rail-faint);padding:20px 14px 6px}
+.ui-rail-foot{margin-top:auto;padding:16px 22px 22px max(22px,env(safe-area-inset-left,0px));border-top:1px solid var(--rail-line);font-size:10.5px;line-height:1.8;color:#63758E}
+.ui-main{flex:1 1 auto;min-width:0;background:var(--stage)}
+.ui-stage{padding:30px max(20px,env(safe-area-inset-right,0px)) 60px max(20px,env(safe-area-inset-left,0px))}
+.ui-stage.is-slide{padding-top:18px;padding-bottom:24px}
+@media only screen and (min-width:901px){
+  .ui-shell.is-collapsed .ui-rail{margin-left:-268px;visibility:hidden;transition:margin-left .32s cubic-bezier(.2,.7,.3,1),visibility 0s linear .32s}
+}
+
+/* ---- slide toolbar ---- */
+.sb{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-8px auto 4px;padding:8px 0;min-height:50px;max-width:100%;background:var(--stage)}
+.sb-gap{flex:1 1 auto}
+.sb-btn{flex:0 0 auto;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--btn-line);background:var(--btn-bg);color:var(--ink);font-size:12.5px;font-weight:600;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease}
+.sb-btn:hover{border-color:var(--btn-line-hi);box-shadow:0 2px 8px var(--btn-shadow)}
+.sb-btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.sb-btn svg{width:15px;height:15px;flex:0 0 auto}
+
+/* ---- slide frame ---- */
+.sw{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.sf{position:relative;margin:0 auto;border-radius:18px;overflow:hidden;background:#040817;box-shadow:0 22px 60px var(--frame-sh1),0 2px 10px var(--frame-sh2)}
+.sl{position:absolute;left:0;top:0;width:1600px;height:900px;transform-origin:0 0;overflow:hidden;font-family:var(--f);color:var(--s-text);
+  background:
+    radial-gradient(900px 520px at 6% -8%,rgba(56,118,255,.30),transparent 62%),
+    radial-gradient(760px 480px at 104% 110%,rgba(0,170,255,.16),transparent 60%),
+    radial-gradient(640px 420px at 58% 52%,rgba(40,80,200,.10),transparent 70%),
+    linear-gradient(165deg,#081437 0%,#060E2A 48%,#040917 100%)}
+.sl::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1.3px);background-size:26px 26px;-webkit-mask-image:radial-gradient(ellipse 78% 70% at 50% 46%,#000 35%,transparent 100%);mask-image:radial-gradient(ellipse 78% 70% at 50% 46%,#000 35%,transparent 100%)}
+.sl::after{content:"";position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(140,180,255,.5),transparent)}
+
+/* header */
+.sl-eb{position:absolute;left:52px;top:48px;font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--s-label)}
+.sl-eb b{color:#8FB8FF;font-weight:700}
+.sl-title{position:absolute;left:52px;top:70px;margin:0;font-size:42px;line-height:1.15;font-weight:700;letter-spacing:-.015em;color:var(--s-ink)}
+.sl-sub{position:absolute;left:52px;top:126px;margin:0;font-size:18px;line-height:1.5;color:#A3B3D6}
+.sl-sub em{font-style:normal;font-weight:600;color:#FCD34D}
+.sl-logo{position:absolute;right:52px;top:48px;width:132px;height:33px;opacity:.96}
+.sl-legend{position:absolute;right:52px;top:110px;display:flex;align-items:center;gap:20px;font-size:14px;color:#B5C3E2}
+.lg{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+/* status tokens: a coloured circle with an icon. Shape says which status, colour makes it easy to spot */
+.tk{position:relative;flex:0 0 auto;display:inline-grid;place-items:center;width:1.36em;height:1.36em;border-radius:999px;background:var(--tk,#F3F6FF);box-shadow:0 0 0 1px rgba(0,0,0,.18),0 0 10px var(--tkg,transparent)}
+.tk::before{content:"";width:66%;height:66%;background:var(--tg,#0A1230);-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
+.st-auto .tk{--tk:#86EFAC;--tg:#053321;--tkg:rgba(134,239,172,.38);--ic:var(--ic-auto)}
+.st-partly .tk{width:2em;--tk:#93C5FD;--tg:#0B1E46;--tkg:rgba(147,197,253,.38);--ic:var(--ic-partly)}
+.st-manual .tk{--tk:#CC1042;--tg:#FFFFFF;--tkg:rgba(204,16,66,.55);--ic:var(--ic-manual)}
+.st-partly .tk::before{width:74%;height:62%}
+.st-none .tk{width:.95em;height:.95em;background:transparent;border:1.6px dashed #FBBF24;box-shadow:none}
+.st-dec .tk{width:.72em;height:.72em;border-radius:2px;background:transparent;border:1.5px solid currentColor;transform:rotate(45deg);box-shadow:none}
+.st-none .tk::before,.st-dec .tk::before{display:none}
+.pop-chip.st-none,.pop-chip.st-dec,.sc.st-none .sc-chip{padding-left:10px}
+.lg b{color:var(--s-ink);font-weight:700;font-variant-numeric:tabular-nums}
+.lg .tk{font-size:14px}
+
+/* stage ribbons: one colour per stage, an arrow tag plus a line across the stage */
+.sg{position:absolute;z-index:2;display:flex;align-items:center;gap:10px;height:30px;pointer-events:none;transition:opacity .3s ease}
+.sg-w{flex:0 0 auto;display:inline-flex;border-radius:16px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35)) drop-shadow(0 0 12px var(--gl))}
+.sg-r{pointer-events:auto;display:inline-flex;align-items:center;gap:9px;height:30px;margin:0;padding:0 24px 0 4px;border:0;border-radius:15px 0 0 15px;background:linear-gradient(90deg,var(--g1),var(--g2));color:#0A1230;font-size:13px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;line-height:1;white-space:nowrap;cursor:pointer;clip-path:polygon(0 0,calc(100% - 13px) 0,100% 50%,calc(100% - 13px) 100%,0 100%);transition:filter .2s ease}
+.sg-r b{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#0A1230;color:var(--g1);font-size:12px;font-weight:800;letter-spacing:0}
+.sg-r:hover,.sg.is-hl .sg-r{filter:brightness(1.1) saturate(1.15)}
+.sg-r:focus-visible{outline:none}
+.sg-w:has(.sg-r:focus-visible),.sg.is-pin .sg-w{outline:2px solid rgba(255,255,255,.92);outline-offset:3px}
+.sg.sg-short .sg-l{display:none}
+.sg-l{position:relative;flex:1 1 auto;min-width:0;height:2px;margin-right:3px;border-radius:2px;background:linear-gradient(90deg,var(--g2),var(--gf))}
+.sg-l::after{content:"";position:absolute;right:-3px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:var(--g2);box-shadow:0 0 8px var(--gl)}
+/* light up one stage */
+.sl.hl .nd:not(.in-hl){opacity:.2}
+.sl.hl .ec:not(.in-hl),.sl.hl .leak-note:not(.in-hl){opacity:.22}
+.sl.hl .sg:not(.is-hl){opacity:.38}
+.sl.hl .sl-svg{opacity:.45}
+
+/* connectors */
+.sl-svg{position:absolute;left:0;top:0;width:1600px;height:900px;overflow:visible;pointer-events:none;z-index:1;transition:opacity .3s ease}
+.fe{fill:none;stroke:rgba(126,156,228,.34);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.fe.is-br{stroke:rgba(150,170,220,.26)}
+.fe.is-lk{stroke:rgba(251,191,36,.42);stroke-dasharray:6 6}
+.ff{fill:none;stroke:rgba(160,200,255,.9);stroke-width:2.8;stroke-linecap:round;stroke-dasharray:.01 15;animation:flow 1.05s linear infinite}
+.ff.is-br{stroke:rgba(205,218,255,.5)}
+.ff.is-lk{stroke:rgba(252,211,77,.95)}
+@keyframes flow{to{stroke-dashoffset:-15.01}}
+.fa{fill:rgba(176,202,255,.85)}
+.fa.is-br{fill:rgba(190,205,240,.6)}
+.fa.is-lk{fill:rgba(251,191,36,.95)}
+.fc1{fill:none;stroke:rgba(110,170,255,.55);stroke-width:8;stroke-linecap:round}
+.fc2{fill:none;stroke:#DCEAFF;stroke-width:2.6;stroke-linecap:round}
+.ec{position:absolute;z-index:2;transform:translate(-50%,-50%);padding:3px 8px;border-radius:999px;background:#0B1740;border:1px solid rgba(255,255,255,.16);font-size:11px;font-weight:800;letter-spacing:.06em;line-height:1;color:#BAC7E3;pointer-events:none;transition:opacity .3s ease}
+.ec.yes{color:#6EE7B7;border-color:rgba(52,211,153,.4)}
+.ec.lk{color:#FCD34D;border-color:rgba(251,191,36,.5)}
+
+/* steps */
+.nd{position:absolute;z-index:3;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:5px;margin:0;padding:14px 16px 13px;text-align:left;color:var(--s-ink);cursor:pointer;
+  --c:var(--st-manual);--ci:#0D1628;
+  background:radial-gradient(130px 70px at 0% 0%,rgba(255,255,255,.07),transparent 70%),linear-gradient(180deg,#17234B,#0E1838);
+  border:1px solid rgba(255,255,255,.13);border-radius:16px;
+  box-shadow:0 16px 36px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.08);
+  transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease,opacity .3s ease}
+.nd.st-auto{--c:var(--st-auto);--ci:#0A1230}
+.nd.st-partly{--c:var(--st-partly);--ci:#0A1230}
+.nd.st-manual{--c:var(--st-manual);--ci:#0D1628}
+.nd.st-none{--c:var(--st-none);--ci:#3A2700}
+.nd.st-dec{--c:#C9D5F0;--ci:#0D1628}
+@supports (color:color-mix(in srgb,red 10%,transparent)){
+  .nd{border-color:color-mix(in srgb,var(--c) 34%,rgba(255,255,255,.08));
+    background:radial-gradient(140px 74px at 0% 0%,color-mix(in srgb,var(--c) 18%,transparent),transparent 72%),linear-gradient(180deg,#17234B,#0E1838)}
+}
+.nd:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--c) 60%,rgba(255,255,255,.2));box-shadow:0 22px 44px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.1)}
+.nd:focus-visible{outline:2px solid #8FB8FF;outline-offset:4px}
+.nd.is-on{border-color:var(--c);box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 30%,transparent),0 22px 44px rgba(0,0,0,.45)}
+.nd-b{position:absolute;left:14px;top:-14px;display:inline-flex;align-items:center;gap:7px;padding:3px 10px 3px 3px;border-radius:999px;background:#0C1739;border:1.3px solid rgba(255,255,255,.34);color:#F3F6FF;font-size:13px;font-weight:800;letter-spacing:.02em;line-height:1;font-variant-numeric:tabular-nums;box-shadow:0 0 0 3px #08133A}
+.nd.st-none .nd-b{border-color:rgba(251,191,36,.7);color:#FCD34D}
+.nd-n{display:block;font-size:17px;font-weight:700;line-height:1.24;letter-spacing:-.005em;color:var(--s-ink);text-wrap:balance}
+.nd-s{display:block;font-size:13.5px;font-weight:500;line-height:1.35;color:var(--s-muted);text-wrap:balance}
+.nd-f{position:absolute;right:16px;bottom:-11px;padding:4px 9px;border-radius:999px;background:#241A03;border:1px solid rgba(251,191,36,.65);color:#FCD34D;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;line-height:1}
+.nd.is-term{border-radius:999px;padding-left:28px;padding-right:24px}
+.nd.is-term .nd-b{left:28px}
+.nd.is-term .nd-f{right:30px}
+.nd.st-none:not(.is-dia){border:1.6px dashed rgba(251,191,36,.75);animation:breathe 3.8s ease-in-out infinite}
+@keyframes breathe{0%,100%{box-shadow:0 16px 36px rgba(0,0,0,.36),0 0 0 0 rgba(251,191,36,0)}50%{box-shadow:0 16px 36px rgba(0,0,0,.36),0 0 30px 3px rgba(251,191,36,.26)}}
+.nd.is-help{background:#0E1A3D;border:1px dashed rgba(170,190,235,.36);border-radius:13px;box-shadow:none;padding:11px 16px;gap:3px}
+.nd.is-help .nd-n{font-size:15px;color:#DCE5FA}
+.nd.is-help .nd-s{font-size:12.5px}
+.nd.is-help:hover{border-color:rgba(200,215,255,.6);box-shadow:none}
+.nd.is-dia{background:none;border:0;box-shadow:none;padding:0;align-items:center;text-align:center}
+.nd.is-dia:hover{transform:translateY(-3px);box-shadow:none}
+.nd.is-dia.is-on{box-shadow:none}
+.dia{position:absolute;left:0;top:0;overflow:visible;transition:filter .25s ease}
+.dia path{fill:url(#gDia);stroke:var(--c);stroke-opacity:.9;stroke-width:1.7}
+.nd.st-dec .dia path{stroke:rgba(205,218,255,.55);stroke-dasharray:none}
+.nd.is-dia.st-none .dia path{stroke-dasharray:7 5}
+.nd.is-dia.st-none .dia{animation:breatheD 3.8s ease-in-out infinite}
+@keyframes breatheD{0%,100%{filter:drop-shadow(0 0 0 rgba(251,191,36,0))}50%{filter:drop-shadow(0 0 13px rgba(251,191,36,.55))}}
+.nd.is-dia:hover .dia{filter:drop-shadow(0 0 10px color-mix(in srgb,var(--c) 55%,transparent))}
+.nd.is-dia.is-on .dia{filter:drop-shadow(0 0 14px color-mix(in srgb,var(--c) 70%,transparent))}
+.nd.is-dia .nd-n{position:relative;max-width:64%;font-size:15px;line-height:1.22;text-align:center}
+.nd.is-dia .nd-b{left:-4px;top:4px}
+.nd.is-leak{border-radius:999px;background:#1C2236;border:1.6px dashed rgba(251,191,36,.8);padding-left:26px;padding-right:22px;animation:breathe 3.8s ease-in-out infinite}
+.nd.is-leak .nd-n{color:#FCD34D}
+.nd.is-leak .nd-s{color:#E3C47C}
+.leak-note{position:absolute;z-index:2;transform:translateY(-50%);display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#FCD34D;white-space:nowrap;pointer-events:none;transition:opacity .3s ease}
+.leak-note svg{width:30px;height:12px}
+.leak-note.is-r{transform:translate(-100%,-50%)}
+
+/* footer */
+.sl-foot{position:absolute;left:52px;right:52px;bottom:24px;display:flex;justify-content:space-between;gap:24px;font-size:13px;color:#6F82AD}
+.sl-foot b{color:#9DB2DA;font-weight:600}
+
+/* step card */
+.pop{position:absolute;z-index:20;width:430px;padding:22px 24px 20px;border-radius:18px;background:linear-gradient(180deg,#142148,#0A122C);border:1px solid rgba(255,255,255,.15);box-shadow:0 30px 70px rgba(0,0,0,.6);color:var(--s-text);--c:var(--st-manual)}
+.pop-top{display:flex;align-items:center;gap:12px;padding-right:40px}
+.pop-num{font-size:26px;font-weight:800;letter-spacing:-.01em;line-height:1;color:var(--s-ink);font-variant-numeric:tabular-nums}
+.pop-chip{display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.04em;line-height:1;color:var(--c);background:rgba(255,255,255,.07)}
+@supports (color:color-mix(in srgb,red 10%,transparent)){.pop-chip{background:color-mix(in srgb,var(--c) 16%,transparent)}}
+.pop-x{position:absolute;top:16px;right:16px;width:34px;height:34px;display:grid;place-items:center;padding:0;border-radius:9px;border:1px solid rgba(255,255,255,.16);background:transparent;color:#AFC0E2;cursor:pointer}
+.pop-x:hover{color:#FFFFFF;border-color:rgba(255,255,255,.32)}
+.pop-x:focus-visible{outline:2px solid #8FB8FF;outline-offset:2px}
+.pop-x svg{width:13px;height:13px}
+.pop-st{display:block;margin-top:16px;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--s-label)}
+.pop h3{margin:6px 0 0;font-size:23px;font-weight:700;line-height:1.28;color:var(--s-ink)}
+.pop p{margin:9px 0 0;font-size:16.5px;line-height:1.6;color:#C9D4EE}
+.pop dl{display:grid;gap:9px;margin:16px 0 0;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)}
+.pop dl div{display:grid;grid-template-columns:92px minmax(0,1fr);gap:14px}
+.pop dt{padding-top:3px;font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#7083AE}
+.pop dd{margin:0;font-size:15.5px;line-height:1.5;color:#E3EAFB}
+.pop dd.src{font-size:13.5px;color:#93A6CF}
+/* fuller click-through card: ways in, plus a day-by-day strip */
+.pop.is-rich{width:600px}
+.pop-ways{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:9px;counter-reset:w}
+.pop-ways li{position:relative;padding-left:34px;font-size:15px;line-height:1.5;color:#C9D4EE;counter-increment:w}
+.pop-ways li::before{content:counter(w);position:absolute;left:0;top:1px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;line-height:1;color:#1A1205;background:var(--g1,#FDBA74)}
+.pop-ways b{font-weight:700;color:#F3F6FF}
+.pop .pop-lh{margin:16px 0 0;font-size:11.5px;font-weight:700;letter-spacing:.12em;line-height:1.4;text-transform:uppercase;color:#7083AE}
+.pop-ways.has-h{margin-top:9px}
+.pop-tl{margin:16px 0 0;padding:14px 12px 13px;border-radius:14px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.1)}
+.pop .tl-h{margin:0 0 0 4px;font-size:11.5px;font-weight:700;letter-spacing:.12em;line-height:1.4;text-transform:uppercase;color:#7083AE}
+.tl{list-style:none;margin:24px 0 0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+.tl li{position:relative;padding-top:20px;text-align:center}
+.tl li::before{content:'';position:absolute;z-index:1;top:3px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--g1,#FDBA74);box-shadow:0 0 0 3px #111C40}
+.tl li::after{content:'';position:absolute;top:8px;right:50%;width:100%;height:2px;background:var(--g1,#FDBA74);opacity:.55}
+.tl li:first-child::after{display:none}
+.tl li.is-start::before{background:#111C40;border:2px solid #AFC0E2}
+.tl li.is-none::before{background:#111C40;border:2px dashed #FBBF24}
+.tl li.is-none b{color:#FBBF24}
+.tl li.is-gap::after{height:0;background:none;border-top:2px dashed #7083AE;opacity:1}
+.tl-gap{position:absolute;top:-13px;right:50%;width:100%;font-style:normal;font-size:11px;font-weight:600;line-height:1;color:#93A6CF;white-space:nowrap}
+.tl b{display:block;font-size:13px;font-weight:700;line-height:1.2;color:#F3F6FF}
+.tl span{display:block;margin-top:3px;padding:0 2px;font-size:12px;line-height:1.3;color:#AFC0E2}
+.pop .tl-n{margin:12px 0 0 4px;font-size:13px;line-height:1.45;color:#AFC0E2}
+/* small flow inside a click-through card */
+.pop-fl{margin:16px 0 0;padding:14px 14px 13px;border-radius:14px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.1)}
+.fl-a{display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr) 24px minmax(0,1fr);margin:12px 0 0}
+.fl-b{display:flex;align-items:center;justify-content:center;min-height:42px;padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04);text-align:center;font-size:13px;line-height:1.35;color:#E6ECFA}
+.fl-ar{position:relative;display:block}
+.fl-ar::before{content:'';position:absolute;left:5px;right:6px;top:50%;height:1.5px;margin-top:-.75px;background:var(--g1,#BEF264);opacity:.75}
+.fl-ar::after{content:'';position:absolute;right:5px;top:50%;width:6px;height:6px;margin-top:-3.5px;border-top:1.5px solid var(--g1,#BEF264);border-right:1.5px solid var(--g1,#BEF264);transform:rotate(45deg)}
+.fl-split{display:grid;gap:8px;margin:12px 0 0;padding:12px 0 0;border-top:1px dashed rgba(200,215,255,.2)}
+.fl-r{display:grid;grid-template-columns:100px minmax(0,1fr) 24px minmax(0,1fr)}
+.fl-r .fl-b{min-height:34px}
+.fl-r.is-leak .fl-c{color:#FBBF24}
+.fl-r.is-leak .fl-b{border:1px dashed rgba(251,191,36,.6);background:rgba(251,191,36,.06);color:#FDE68A}
+.fl-r.is-leak .fl-ar::before{background:#FBBF24}
+.fl-r.is-leak .fl-ar::after{border-color:#FBBF24}
+.fl-c{display:flex;align-items:center;font-size:11.5px;font-weight:700;letter-spacing:.08em;line-height:1.2;text-transform:uppercase;color:#93A6CF}
+.pop .pop-note{margin:14px 0 0;padding:10px 13px;border-radius:12px;border:1px dashed rgba(200,215,255,.3);background:rgba(255,255,255,.035);font-size:14.5px;line-height:1.5;color:#C9D4EE}
+.pop-note b{font-weight:700;color:#FFFFFF}
+/* words with a hover note (FTD, Edwin's minimum): dotted underline, note on hover, focus or tap */
+.term{cursor:pointer;color:#F3F6FF;font-weight:600;text-decoration:underline dotted;text-decoration-thickness:1.5px;text-underline-offset:3px;text-decoration-color:rgba(243,246,255,.8);border-radius:3px}
+.term:hover,.term:focus-visible{text-decoration-style:solid;text-decoration-color:var(--g1,#BEF264);outline:none}
+.term:focus-visible{box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+.term-tip{position:fixed;z-index:2147483000;width:max-content;max-width:min(380px,calc(100vw - 16px));padding:12px 14px 11px;border-radius:12px;background:#0B1430;border:1px solid rgba(255,255,255,.2);box-shadow:0 18px 44px rgba(0,0,0,.55);font-family:var(--f);font-size:13.5px;line-height:1.5;color:#C9D4EE;text-align:left;pointer-events:auto;-webkit-user-select:text;user-select:text}
+.term-tip b{display:block;margin:0 0 3px;font-size:14.5px;font-weight:800;color:#FFFFFF}
+.term-tip p{margin:0}
+.term-tip .tt-p{margin-top:6px;color:#AFC0E2}
+.term-tip.is-pinned{border-color:rgba(190,242,100,.6);box-shadow:0 18px 44px rgba(0,0,0,.55),0 0 0 1px rgba(190,242,100,.22)}
+.term-tip .tt-x{display:none;position:absolute;top:7px;right:7px;width:28px;height:28px;border:0;border-radius:8px;background:transparent;color:#AFC0E2;font:700 19px/1 var(--f);cursor:pointer}
+.term-tip.is-pinned .tt-x{display:block}
+.term-tip.is-pinned .tt-body>b{padding-right:28px}
+.term-tip .tt-x:hover{background:rgba(255,255,255,.1);color:#FFFFFF}
+.term-tip .tt-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)}
+.term-tip .tt-btn{appearance:none;display:inline-flex;align-items:center;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.07);color:#F3F6FF;font:700 12px/1 var(--f);padding:8px 11px;border-radius:8px;cursor:pointer;text-decoration:none}
+.term-tip .tt-btn:hover{background:rgba(255,255,255,.14)}
+.term-tip .tt-open{background:#A9C7FF;border-color:#A9C7FF;color:#0B1430}
+.term-tip .tt-open:hover{background:#CADCFF}
+.term-tip .tt-btn:focus-visible,.term-tip .tt-x:focus-visible{outline:2px solid #BEF264;outline-offset:2px}
+.term-tip .tt-hint{font-size:11.5px;color:#7083AE}
+.term-tip.is-pinned .tt-hint{display:none}
+.term-link{color:#A9C7FF;cursor:pointer;text-decoration-style:solid;text-decoration-color:rgba(169,199,255,.7)}
+.term-link::after{content:"\2197";display:inline-block;margin-left:2px;font-size:.85em;font-weight:700}
+.term-link:hover,.term-link:focus-visible{color:#FFFFFF}
+.term-tip .tt-link{margin-top:7px;font-weight:700;color:#A9C7FF}
+.term-tip .tt-link span{font-weight:500;color:#7083AE}
+.term-tip .tt-l{margin:6px 0 0;padding-left:17px}
+.term-tip .tt-l li{margin:3px 0}
+b .term{font-weight:inherit}
+.sl-title .term{font-weight:inherit;color:inherit;text-decoration-thickness:3px;text-underline-offset:8px}
+.term-tip .tt-src{margin-top:7px;font-size:11.5px;color:#7083AE}
+
+/* ---- the deck: the full journey first, then one slide per stage, split by thin dividers ---- */
+.jn{display:flex;align-items:center;gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.jn::-webkit-scrollbar{display:none}
+.jn button{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;height:30px;margin:0;padding:0 11px;border:0;border-radius:8px;background:transparent;color:var(--jn-text);font-size:12px;font-weight:700;letter-spacing:.01em;white-space:nowrap;cursor:pointer;transition:background-color .15s ease,color .15s ease,box-shadow .15s ease}
+.jn button:hover{background:var(--jn-hover);color:var(--ink)}
+.jn button.is-on{background:var(--jn-on);color:var(--ink);box-shadow:0 1px 4px var(--jn-on-shadow)}
+.jn button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.jn i{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:var(--g2,#5B8DEF)}
+
+.dv{display:flex;align-items:center;gap:14px;width:var(--fw,100%);max-width:100%;margin:46px auto 16px}
+.dv-r{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 19px 0 3px;border-radius:13px 0 0 13px;background:linear-gradient(90deg,var(--g1),var(--g2));color:#0A1230;font-size:11.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;line-height:1;white-space:nowrap;clip-path:polygon(0 0,calc(100% - 11px) 0,100% 50%,calc(100% - 11px) 100%,0 100%)}
+.dv-r b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#0A1230;color:var(--g1);font-size:11px;font-weight:800;letter-spacing:0}
+.dv-t{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--dv-text);white-space:nowrap}
+.dv-l{flex:1 1 auto;min-width:16px;height:1px;background:var(--dv-line)}
+.sw + .sw{margin-top:22px}
+
+/* stage slide */
+.st{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;padding:44px 52px 28px}
+.st-top{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px;height:33px}
+.st-eb{font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--s-label);white-space:nowrap}
+.st-eb b{color:#8FB8FF;font-weight:700}
+.st-logo{display:block;width:132px;height:33px;opacity:.96}
+.st-head{flex:0 0 auto;display:flex;align-items:center;gap:20px;min-width:0;margin-top:22px}
+.rb-w{flex:0 0 auto;display:inline-flex;border-radius:20px;filter:drop-shadow(0 8px 18px rgba(0,0,0,.35)) drop-shadow(0 0 14px var(--gl))}
+.rb{display:inline-flex;align-items:center;gap:11px;height:40px;padding:0 32px 0 5px;border-radius:20px 0 0 20px;background:linear-gradient(90deg,var(--g1),var(--g2));color:#0A1230;font-size:15px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;line-height:1;white-space:nowrap;clip-path:polygon(0 0,calc(100% - 17px) 0,100% 50%,calc(100% - 17px) 100%,0 100%)}
+.rb b{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#0A1230;color:var(--g1);font-size:14px;font-weight:800;letter-spacing:0}
+.st-title{min-width:0;margin:0;font-size:40px;line-height:1.15;font-weight:700;letter-spacing:-.015em;color:var(--s-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-sub{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:28px;margin-top:14px}
+.st-sub p{min-width:0;margin:0;font-size:18px;line-height:1.5;color:#A3B3D6}
+.st-cnt{flex:0 0 auto;display:flex;align-items:center;gap:18px;font-size:14px;color:#B5C3E2}
+.st-grid{--gap:40px;flex:1 1 auto;min-height:0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);column-gap:var(--gap);align-content:center;align-items:stretch;margin:24px 0 18px}
+.st-grid.c1{grid-auto-columns:minmax(0,1080px);justify-content:center}
+.st-foot{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px;font-size:13.5px;color:#6F82AD}
+.st-foot b{color:#B9C8E8;font-weight:600}
+.st-dot{display:inline-block;width:4px;height:4px;margin:0 12px 2px;border-radius:50%;background:#4F628C;vertical-align:middle}
+.st-tr{display:flex;align-items:center;gap:6px;margin:0;padding:0;list-style:none}
+.st-tr li{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 4px;border-radius:13px;border:1px solid rgba(255,255,255,.08);font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;line-height:1;color:#7083AE;white-space:nowrap}
+.st-tr li b{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.08);color:var(--g1);font-size:10.5px;letter-spacing:0}
+.st-tr li.is-cur{border-color:transparent;background:linear-gradient(90deg,var(--g1),var(--g2));color:#0A1230}
+.st-tr li.is-cur b{background:#0A1230}
+
+/* step cards on a stage slide */
+.sc{position:relative;display:flex;flex-direction:column;gap:12px;min-width:0;padding:22px 24px 18px;border-radius:18px;color:var(--s-text);
+  --c:var(--st-manual);--ci:#0D1628;
+  background:radial-gradient(220px 110px at 0% 0%,rgba(255,255,255,.06),transparent 70%),linear-gradient(180deg,#17234B,#0E1838);
+  border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 40px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.07);
+  transition:opacity .6s cubic-bezier(.2,.7,.3,1),transform .6s cubic-bezier(.2,.7,.3,1)}
+.sc::after{content:"";position:absolute;left:20px;right:20px;top:-1px;height:3px;border-radius:0 0 3px 3px;background:linear-gradient(90deg,var(--g1),var(--g2));box-shadow:0 0 14px var(--gl)}
+.sc.st-auto{--c:var(--st-auto);--ci:#0A1230}
+.sc.st-partly{--c:var(--st-partly);--ci:#0A1230}
+.sc.st-manual{--c:var(--st-manual);--ci:#0D1628}
+.sc.st-none{--c:var(--st-none);--ci:#3A2700;border:1.6px dashed rgba(251,191,36,.72)}
+.sc + .sc::before{content:"";position:absolute;top:50%;left:calc(var(--gap) / -2 - 12px);width:24px;height:12px;margin-top:-6px;background:var(--g2);opacity:.85;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 12'%3E%3Cpath d='M1.5 6h18M15.5 2l4.5 4-4.5 4' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 12'%3E%3Cpath d='M1.5 6h18M15.5 2l4.5 4-4.5 4' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
+.sc-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sc-b{display:inline-flex;align-items:center;gap:8px;padding:3px 11px 3px 3px;border-radius:999px;background:#0C1739;border:1.3px solid rgba(255,255,255,.34);color:#F3F6FF;font-size:13px;font-weight:800;letter-spacing:.02em;line-height:1;font-variant-numeric:tabular-nums}
+.sc.st-none .sc-b{border-color:rgba(251,191,36,.7);color:#FCD34D}
+.sc-chip{display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.04em;line-height:1;color:var(--c);background:rgba(255,255,255,.07);white-space:nowrap}
+@supports (color:color-mix(in srgb,red 10%,transparent)){.sc-chip{background:color-mix(in srgb,var(--c) 16%,transparent)}}
+.sc-n{margin:0;font-size:22px;font-weight:700;line-height:1.25;letter-spacing:-.005em;color:var(--s-ink);text-wrap:balance}
+.sc-w{margin:0;font-size:16px;line-height:1.55;color:#C9D4EE}
+.sc-br{margin:0;padding:10px 13px;border-radius:12px;border:1px dashed rgba(200,215,255,.26);background:rgba(255,255,255,.035);font-size:14.5px;line-height:1.5;color:#C9D4EE}
+.sc-br b{color:#FFFFFF;font-weight:700}
+.sc-br.is-leak{border-color:rgba(251,191,36,.6);background:rgba(251,191,36,.06)}
+.sc-br.is-leak b{color:#FCD34D}
+.sc-m{display:grid;gap:7px;margin:0;padding-top:12px;border-top:1px solid rgba(255,255,255,.09)}
+.sc-m div{display:grid;grid-template-columns:84px minmax(0,1fr);gap:12px}
+.sc-m dt{padding-top:2px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#7083AE}
+.sc-m dd{margin:0;font-size:14.5px;line-height:1.45;color:#E3EAFB}
+.tbc{display:inline-block;padding:1px 8px;border:1px dashed rgba(170,190,235,.5);border-radius:999px;font-size:.84em;font-weight:600;line-height:1.5;color:#A9B8DA;white-space:nowrap}
+.nso{color:#FCD34D;font-weight:600}
+.sc-src{margin:auto 0 0;font-size:12px;line-height:1.45;color:#7F92BC}
+.sc-m dt{white-space:nowrap}
+/* type grows when a slide has fewer steps, so every slide reads well on a big screen */
+.c1 .sc:not(.sc-ghost){display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);column-gap:52px;row-gap:18px;padding:40px 44px 32px}
+.c1 .sc:not(.sc-ghost) > .sc-top,.c1 .sc:not(.sc-ghost) > .sc-n,.c1 .sc:not(.sc-ghost) > .sc-w,.c1 .sc:not(.sc-ghost) > .sc-br{grid-column:1}
+.c1 .sc:not(.sc-ghost) > .sc-m{grid-column:2;grid-row:1 / span 3;align-self:center;padding:0 0 0 40px;border-top:0;border-left:1px solid rgba(255,255,255,.09);gap:14px}
+.c1 .sc:not(.sc-ghost) > .sc-src{grid-column:1 / -1}
+.c1 .sc:not(.sc-ghost) .sc-b{padding:7px 13px;font-size:16px}
+.c1 .sc:not(.sc-ghost) .sc-chip{padding:7px 14px;font-size:14px}
+.c1 .sc:not(.sc-ghost) .sc-n{font-size:38px}
+.c1 .sc-w{font-size:24px}
+.c1 .sc-m div{grid-template-columns:124px minmax(0,1fr);gap:16px}
+.c1 .sc-m dt{padding-top:6px;font-size:13px}
+.c1 .sc-m dd{font-size:21px}
+.c1 .sc-src{font-size:14px}
+.st-grid.c1.has-ghost{grid-auto-flow:row;grid-template-columns:220px minmax(0,1fr) 220px;justify-content:stretch}
+.sc-ghost{align-self:center;gap:12px;padding:20px 20px 22px;opacity:.62;background:linear-gradient(180deg,rgba(23,35,75,.75),rgba(14,24,56,.75));box-shadow:none}
+.sc-ghost .sc-n{font-size:19px;font-weight:700;line-height:1.25;color:var(--s-ink)}
+.sc-gl{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;line-height:1.5;color:var(--g1)}
+.c2 .sc{padding:30px 32px 24px;gap:16px}
+.c2 .sc-b{padding:6px 12px;font-size:15px}
+.c2 .sc-chip{padding:6px 13px;font-size:13.5px}
+.c2 .sc-n{font-size:30px}
+.c2 .sc-w{font-size:20px}
+.c2 .sc-br{font-size:17px}
+.c2 .sc-m{gap:10px;padding-top:16px}
+.c2 .sc-m div{grid-template-columns:112px minmax(0,1fr);gap:14px}
+.c2 .sc-m dt{padding-top:4px;font-size:12px}
+.c2 .sc-m dd{font-size:18px}
+.c2 .sc-src{font-size:13.5px}
+.c3 .sc-n{font-size:24px}
+.c3 .sc-w{font-size:17px}
+.c3 .sc-br{font-size:15.5px}
+.c3 .sc-m div{grid-template-columns:94px minmax(0,1fr)}
+.c3 .sc-m dd{font-size:15.5px}
+.c3 .sc-src{font-size:12.5px}
+.c4 .sc{padding:20px 19px 16px;gap:11px}
+.c4 .sc-n{font-size:21px}
+.c4 .sc-w{font-size:15.5px;line-height:1.5}
+.c4 .sc-br{padding:9px 11px;font-size:14.5px}
+.c4 .sc-m div{grid-template-columns:86px minmax(0,1fr);gap:10px}
+.c4 .sc-m dt{font-size:10.5px}
+.c4 .sc-m dd{font-size:14.5px}
+.c4 .sc-src{font-size:12px}
+
+/* full screen: one slide at a time, arrow keys or the small bar at the bottom */
+.deck.is-fs{background:#030612}
+.deck.is-fs > .dv,.deck.is-fs > .sw:not(.is-cur){display:none}
+.deck.is-fs > .sw.is-cur{position:fixed;inset:0;margin:0;padding:0;overflow:hidden}
+.deck.is-fs .sf{width:100vw!important;height:100vh!important;border-radius:0;box-shadow:none;background:#030612}
+.deck.is-fs .sl{left:50%;top:50%;transform-origin:50% 50%}
+.fsn{display:none}
+.deck.is-fs .fsn{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:50;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:6px;border-radius:14px;background:rgba(8,14,36,.78);border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 30px rgba(0,0,0,.4);opacity:.2;transition:opacity .3s ease}
+.deck.is-fs.fs-wake .fsn,.deck.is-fs .fsn:hover,.deck.is-fs .fsn:focus-within{opacity:1}
+.fsn button{display:grid;place-items:center;width:34px;height:34px;margin:0;padding:0;border:0;border-radius:9px;background:rgba(255,255,255,.08);color:#E6EDFF;cursor:pointer}
+.fsn button:hover{background:rgba(255,255,255,.16)}
+.fsn button:disabled{opacity:.3;cursor:default}
+.fsn button:focus-visible{outline:2px solid #8FB8FF;outline-offset:1px}
+.fsn button svg{width:14px;height:14px}
+.fsn span{min-width:170px;padding:0 6px;text-align:center;font-size:12.5px;font-weight:700;letter-spacing:.04em;color:#C9D4EE;white-space:nowrap}
+
+/* ---- Aaron's checklist: the slides' dark look, laid out to read on any screen rather than to present ---- */
+.ui-prog{display:block;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer;transition:background-color .15s ease,border-color .15s ease}
+.ui-prog:hover{background:#0E1A33;border-color:#2C3D57}
+.ui-prog:focus-visible{outline:2px solid var(--blue-hi);outline-offset:2px}
+.ui-prog-bar{display:block}
+.ui-prog-bar i{transition:width .5s ease}
+.ui-chip.is-done{background:rgba(134,239,172,.15);color:#86EFAC}
+.ck-sb{max-width:1760px}
+.ck-sr{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.ck-sheet{position:relative;max-width:1760px;margin:0 auto;padding:44px 52px 30px;border-radius:18px;overflow:hidden;font-family:var(--f);color:var(--s-text);container-type:inline-size;
+  background:
+    radial-gradient(900px 520px at 6% -4%,rgba(56,118,255,.30),transparent 62%),
+    radial-gradient(760px 480px at 104% 100%,rgba(0,170,255,.14),transparent 60%),
+    radial-gradient(640px 420px at 58% 40%,rgba(40,80,200,.08),transparent 70%),
+    linear-gradient(165deg,#081437 0%,#060E2A 48%,#040917 100%);
+  box-shadow:0 22px 60px var(--frame-sh1),0 2px 10px var(--frame-sh2)}
+.ck-sheet::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1.3px);background-size:26px 26px;-webkit-mask-image:linear-gradient(180deg,#000 0,transparent 640px);mask-image:linear-gradient(180deg,#000 0,transparent 640px)}
+.ck-sheet::after{content:"";position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(140,180,255,.5),transparent)}
+.ck-sheet>*{position:relative;z-index:1}
+.ck-head{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.ck-eb{font-size:12.5px;font-weight:700;letter-spacing:.2em;line-height:1.5;text-transform:uppercase;color:var(--s-label)}
+.ck-eb b{color:#8FB8FF;font-weight:700}
+.ck-logo{display:block;flex:0 0 auto;width:132px;height:33px;opacity:.96}
+.ck-title{margin:14px 0 0;font-size:38px;line-height:1.15;font-weight:700;letter-spacing:-.015em;color:var(--s-ink);text-wrap:balance}
+.ck-sub{margin:10px 0 0;max-width:62em;font-size:17px;line-height:1.55;color:#A3B3D6}
+.ck-lh{margin:0;font-size:11.5px;font-weight:700;letter-spacing:.14em;line-height:1.4;text-transform:uppercase;color:#7083AE}
+/* at a glance */
+.ck-gw{margin:28px 0 0;padding:16px 16px 8px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.1)}
+.ck-gh{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px;padding:0 6px 8px}
+.ck-pg{display:inline-flex;align-items:center;gap:10px;font-size:13px;color:#AFC0E2;font-variant-numeric:tabular-nums}
+.ck-pg b{color:var(--s-ink);font-weight:800}
+.ck-pg-bar{display:block;width:140px;height:5px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
+.ck-pg-bar i{display:block;height:100%;border-radius:5px;background:#86EFAC}
+.ck-glance{list-style:none;margin:0;padding:0}
+.ck-glance li+li{border-top:1px solid rgba(255,255,255,.07)}
+.ck-g{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:4px 14px;width:100%;margin:0;padding:11px 6px;border:0;border-radius:10px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color .15s ease}
+.ck-g:hover{background:rgba(255,255,255,.05)}
+.ck-g:focus-visible{outline:2px solid #8FB8FF;outline-offset:1px}
+.ck-gn{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));color:#0A1230;font-size:13px;font-weight:800;line-height:1}
+.ck-gq{font-size:15.5px;font-weight:700;line-height:1.35;color:var(--s-ink)}
+.ck-gs{grid-column:2 / 4;grid-row:2;font-size:14.5px;line-height:1.45;color:#C9D4EE}
+.ck-gs em{font-style:normal;margin-right:8px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8FB8FF}
+.ck-g .ck-st{grid-column:3;grid-row:1}
+@container (min-width:860px){
+  .ck-g{grid-template-columns:28px minmax(0,.95fr) minmax(0,1.05fr) auto;gap:16px}
+  .ck-gs{grid-column:3;grid-row:1}
+  .ck-g .ck-st{grid-column:4}
+}
+/* status: dashed amber ring while it's open, green tick once Aaron answers */
+.ck-st{display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;padding:4px 11px 4px 6px;border-radius:999px;background:rgba(251,191,36,.1);color:#FCD34D;font-size:12px;font-weight:700;letter-spacing:.04em;line-height:1;white-space:nowrap}
+.ck-st i{flex:0 0 auto;width:13px;height:13px;border-radius:50%;border:1.6px dashed #FBBF24}
+.ck-st.is-done{background:rgba(134,239,172,.12);color:#86EFAC}
+.ck-st.is-done i{border:0;border-radius:0;background:#86EFAC;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.5 8.6l3.6 3.4 7.4-8' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.5 8.6l3.6 3.4 7.4-8' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
+/* one card per decision */
+.ck-cards{display:grid;gap:22px;margin:26px 0 0}
+.ck-card{position:relative;display:grid;grid-template-columns:minmax(0,1fr);border-radius:18px;color:var(--s-text);scroll-margin-top:72px;
+  background:radial-gradient(260px 120px at 0% 0%,rgba(255,255,255,.06),transparent 70%),linear-gradient(180deg,#17234B,#0E1838);
+  border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 40px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.07)}
+.ck-card::after{content:"";position:absolute;left:22px;right:22px;top:-1px;height:3px;border-radius:0 0 3px 3px;background:linear-gradient(90deg,var(--g1),var(--g2));box-shadow:0 0 14px var(--gl)}
+.ck-card:focus:not(.is-flash){outline:none}
+@keyframes ckFlash{0%,100%{outline-color:rgba(143,184,255,0)}25%,60%{outline-color:rgba(143,184,255,.85)}}
+.ck-card.is-flash{outline:3px solid rgba(143,184,255,0);outline-offset:4px;animation:ckFlash 1.6s ease}
+.ck-main{display:flex;flex-direction:column;gap:14px;min-width:0;padding:26px 28px 24px}
+.ck-side{display:flex;flex-direction:column;gap:11px;min-width:0;margin:0 28px 24px;padding-top:18px;border-top:1px solid rgba(255,255,255,.09)}
+@container (min-width:940px){
+  .ck-card{grid-template-columns:minmax(0,1.32fr) minmax(0,1fr)}
+  .ck-side{margin:26px 0 24px;padding:2px 28px 0 30px;border-top:0;border-left:1px solid rgba(255,255,255,.09)}
+}
+.ck-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
+.ck-num{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));color:#0A1230;font-size:15px;font-weight:800;line-height:1;box-shadow:0 0 14px var(--gl)}
+.ck-steps{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 0}
+.ck-steps>span{margin-right:2px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#7083AE}
+.ck-step{display:inline-flex;align-items:center;gap:7px;height:28px;margin:0;padding:0 11px 0 4px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#DCE5FA;font:600 12.5px/1 var(--f);white-space:nowrap;cursor:pointer;transition:background-color .15s ease,border-color .15s ease}
+.ck-step b{display:grid;place-items:center;min-width:30px;height:20px;padding:0 6px;border-radius:10px;background:var(--g1);color:#0A1230;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}
+.ck-step:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3)}
+.ck-step:focus-visible{outline:2px solid #8FB8FF;outline-offset:2px}
+.ck-q{margin:2px 0 0;font-size:25px;font-weight:700;line-height:1.28;letter-spacing:-.005em;color:var(--s-ink);text-wrap:balance}
+.ck-why{margin:0;font-size:16px;line-height:1.6;color:#C9D4EE}
+.ck-opts{list-style:none;margin:-4px 0 0;padding:0;display:grid;gap:8px}
+.ck-opt,.ck-plus{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03)}
+.ck-l{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);color:#E6ECFA;font-size:13px;font-weight:800;line-height:1}
+.ck-oh{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-height:26px}
+.ck-oh b{font-size:16px;font-weight:700;line-height:1.35;color:#F3F6FF}
+.ck-ob p{margin:3px 0 0;font-size:14.5px;line-height:1.55;color:#C9D4EE}
+.ck-tag{display:inline-flex;align-items:center;height:21px;padding:0 9px;border-radius:999px;background:#A9C7FF;color:#0B1430;font-size:10.5px;font-weight:800;letter-spacing:.1em;line-height:1;text-transform:uppercase;white-space:nowrap}
+.ck-opt.is-pick,.ck-plus{border-color:rgba(143,184,255,.55);background:rgba(143,184,255,.08)}
+.ck-opt.is-pick .ck-l{background:#A9C7FF;color:#0B1430}
+.ck-plus .ck-l{background:transparent;border:1.5px solid #A9C7FF;color:#A9C7FF}
+.ck-plus .ck-l svg{width:14px;height:14px}
+.ck-opt.is-his{border-color:rgba(134,239,172,.6);background:rgba(134,239,172,.07)}
+.ck-opt.is-his .ck-l{background:#86EFAC;color:#053321}
+.ck-tag.is-his{background:#86EFAC;color:#053321}
+.ck-rsn{margin:0;padding:12px 14px;border-radius:12px;border:1px dashed rgba(200,215,255,.3);background:rgba(255,255,255,.035);font-size:15px;line-height:1.55;color:#C9D4EE}
+.ck-rsn b{color:#FFFFFF;font-weight:700}
+.ck-facts{list-style:none;margin:-2px 0 4px;padding:0;display:grid;gap:11px}
+.ck-facts li{position:relative;padding-left:17px;font-size:14.5px;line-height:1.55;color:#C9D4EE}
+.ck-facts li::before{content:"";position:absolute;left:2px;top:.6em;width:6px;height:6px;border-radius:50%;background:var(--g1)}
+.ck-src{display:block;margin-top:2px;font-size:12.5px;line-height:1.4;color:#7F92BC}
+.ck-next{margin:-2px 0 4px;font-size:14.5px;line-height:1.55;color:#E3EAFB}
+.ck-ans{margin-top:auto;padding:12px 14px;border-radius:12px;border:1.5px dashed rgba(251,191,36,.6);background:rgba(251,191,36,.06);font-size:14.5px;line-height:1.5;color:#FDE68A}
+.ck-ans b{display:block;margin-bottom:3px;font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FCD34D}
+.ck-ans.is-done{border:1.5px solid rgba(134,239,172,.55);background:rgba(134,239,172,.07);color:#D1FAE5}
+.ck-ans.is-done b{color:#86EFAC}
+.ck-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;margin:26px 0 0;font-size:13px;line-height:1.5;color:#6F82AD}
+.ck-foot b{color:#9DB2DA;font-weight:600}
+/* links from the flowchart's "to confirm" notes into the checklist */
+.ck-link{margin-left:3px;color:#A9C7FF;font-weight:700;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px;border-radius:3px}
+.ck-link::after{content:"\2192";display:inline-block;margin-left:4px;text-decoration:none}
+.ck-link:hover,.ck-link:focus-visible{color:#FFFFFF}
+.ck-link:focus-visible{outline:2px solid #8FB8FF;outline-offset:2px}
+@media only screen and (max-width:620px){
+  .ck-sheet{padding:26px 18px 22px;border-radius:14px}
+  .ck-head{align-items:flex-start}
+  .ck-logo{width:100px;height:25px}
+  .ck-eb{font-size:11px;letter-spacing:.16em}
+  .ck-title{font-size:27px}
+  .ck-sub{font-size:15.5px}
+  .ck-gw{padding:12px 10px 6px}
+  .ck-main{padding:22px 18px 20px}
+  .ck-side{margin:0 18px 20px}
+  .ck-q{font-size:21px}
+  .ck-why{font-size:15.5px}
+  .ck-g .ck-st{padding:5px}
+  .ck-g .ck-stt{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .ck-foot{flex-direction:column}
+}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--rail);color:#E8EFF9;border:1px solid var(--rail-line-2);border-radius:8px;padding:10px 16px;font-size:13px;z-index:80;box-shadow:0 10px 30px rgba(5,10,24,.32);max-width:calc(100vw - 32px)}
+
+@media only screen and (max-width:900px){
+  .ui-shell{display:block}
+  .ui-rail{width:auto;flex:none;height:auto;position:static;overflow:visible}
+  .ui-rail-head{padding:18px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
+  .ui-hide,.sb-show{display:none!important}
+  .ui-rail-region{padding-top:14px}
+  .ui-prog{max-width:420px}
+  .ui-list{flex-direction:row;overflow-x:auto;padding:12px max(16px,env(safe-area-inset-right,0px)) 14px max(16px,env(safe-area-inset-left,0px));gap:8px;scrollbar-width:thin}
+  .ui-item{width:auto;flex:0 0 auto;min-width:184px;max-width:230px;border-left:0;border-bottom:2px solid transparent;border-radius:6px}
+  .ui-item.is-active{border-left:0;border-bottom-color:var(--blue)}
+  .ui-group,.ui-rail-foot{display:none}
+}
+@media only screen and (max-width:620px){
+  .ui-stage,.ui-stage.is-slide{padding:16px max(16px,env(safe-area-inset-right,0px)) 28px max(16px,env(safe-area-inset-left,0px))}
+  #fsBtn{padding:0 10px}
+  #fsBtn span{display:none}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="ui-shell">
+  <aside class="ui-rail" id="rail">
+    <div class="ui-rail-head">
+      <img src="data:image/png;base64,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" alt="TMGM" width="132" height="33">
+      <button type="button" class="ui-hide" id="railHide" aria-controls="rail" aria-expanded="true" aria-label="Hide tabs" title="Hide tabs"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8.5 3.5L4 8l4.5 4.5M12.5 3.5L8 8l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="ui-rail-region">Finsfree pilot</div>
+      <div class="ui-rail-sub">Malaysia, Vietnam and South Korea ·<br>IB bots, end to end</div>
+      <div class="ui-prog-label">Aaron to confirm</div>
+      <button type="button" class="ui-prog" id="ckProg" aria-controls="panel-checklist" aria-label="Aaron to confirm: 0 of 5 confirmed. Open Aaron's checklist."><span class="ui-prog-top"><span class="ui-prog-n" id="ckProgN">0 / 5</span><span class="ui-prog-s">confirmed</span></span><span class="ui-prog-bar"><i id="ckProgBar"></i></span></button>
+    </div>
+    <nav class="ui-list" aria-label="Playbook tabs">
+      <button type="button" class="ui-item is-active" id="tab-summary" aria-current="page" aria-controls="panel-summary"><span class="ui-item-top"><span class="ui-item-name">Executive summary</span><span class="ui-chip">1 min</span></span><span class="ui-item-role">The Finsfree flow at a glance</span></button>
+      <button type="button" class="ui-item" id="tab-checklist" aria-controls="panel-checklist"><span class="ui-item-top"><span class="ui-item-name">Aaron's checklist</span><span class="ui-chip is-red" id="ckChip">5</span></span><span class="ui-item-role">5 decisions, each with our suggestion</span></button>
+      <div class="ui-group">Start here</div>
+      <button type="button" class="ui-item is-pending" id="tab-p01" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">01 What Finsfree is</span><span class="ui-chip is-muted">Facts</span></span><span class="ui-item-role">Bots, AI website, indicators and EAs</span></button>
+      <button type="button" class="ui-item is-pending" id="tab-p02" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">02 Pilot markets</span><span class="ui-chip is-muted">Facts</span></span><span class="ui-item-role">Malaysia, Vietnam, Korea and their IBs</span></button>
+      <div class="ui-group">Set it up</div>
+      <button type="button" class="ui-item is-pending" id="tab-p03" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">03 Picking IBs</span><span class="ui-chip is-red">1</span></span><span class="ui-item-role">Who fits, and Edwin's minimum</span></button>
+      <button type="button" class="ui-item is-pending" id="tab-p04" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">04 Building the bot</span><span class="ui-chip is-muted">Facts</span></span><span class="ui-item-role">The form, build times, languages</span></button>
+      <div class="ui-group">Run it</div>
+      <button type="button" class="ui-item is-pending" id="tab-p05" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">05 Pro approval</span><span class="ui-chip is-red">3</span></span><span class="ui-item-role">The AM's check, step by step</span></button>
+      <button type="button" class="ui-item is-pending" id="tab-p06" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">06 Renewals and reviews</span><span class="ui-chip is-red">1</span></span><span class="ui-item-role">Monthly checks, and when a bot stops</span></button>
+      <div class="ui-group">Keep it right</div>
+      <button type="button" class="ui-item is-pending" id="tab-p07" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">07 What not to promise</span><span class="ui-chip is-muted">Facts</span></span><span class="ui-item-role">No win rates, profit or guarantees</span></button>
+      <button type="button" class="ui-item is-pending" id="tab-p08" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">08 Who does what</span><span class="ui-chip is-plan">Plan</span></span><span class="ui-item-role">Owners and contacts for every step</span></button>
+      <button type="button" class="ui-item is-pending" id="tab-p09" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">09 FAQ</span><span class="ui-chip is-muted">Facts</span></span><span class="ui-item-role">Quick answers and terms we use</span></button>
+    </nav>
+    <div class="ui-rail-foot">Internal · Finsfree pilot for Malaysia, Vietnam and South Korea. Vietnam is first in line.<br>Greyed tabs come next, built one at a time.</div>
+  </aside>
+
+  <main class="ui-main">
+    <div class="ui-stage is-slide">
+      <section class="ui-panel" id="panel-summary" aria-labelledby="tab-summary">
+        <div class="sb" id="sb">
+          <button type="button" class="sb-btn sb-show" id="railShow" aria-controls="rail" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6 2.8v10.4" stroke="currentColor" stroke-width="1.4"/></svg><span>Show tabs</span></button>
+          <nav class="jn" id="jn" aria-label="Jump to a slide"></nav>
+          <span class="sb-gap"></span>
+          <button type="button" class="sb-btn" id="fsBtn" aria-label="Full screen" title="Present the slides one at a time. Use the arrow keys to move."><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Full screen</span></button>
+        </div>
+        <div class="deck" id="deck">
+        <div class="sw" id="sw">
+          <div class="sf" id="sf">
+            <div class="sl" id="sl" role="group" aria-label="Slide: how Finsfree works for an IB, step by step. Select a step for details.">
+              <svg class="sl-svg" id="slSvg" viewBox="0 0 1600 900" width="1600" height="900" aria-hidden="true" focusable="false">
+                <defs>
+                  <linearGradient id="gDia" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1D2D60"/><stop offset="1" stop-color="#0C1636"/></linearGradient>
+                  <filter id="fGlow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4"/></filter>
+                </defs>
+                <g id="gEdges"></g>
+                <g id="gComet"><path class="fc1" id="comet1" filter="url(#fGlow)" d="M0 0"/><path class="fc2" id="comet2" d="M0 0"/></g>
+              </svg>
+              <div class="sl-eb">Finsfree pilot · <b>Executive summary</b> · Updated 12 Nov 2026</div>
+              <h1 class="sl-title">How <span class="term" role="term" tabindex="0" data-term="Finsfree" aria-describedby="termTip">Finsfree</span> works for an IB, step by step</h1>
+              <p class="sl-sub">15 steps, from picking an IB to keeping the bot. <em>The dashed yellow branches</em> are where we lose clients and IBs.</p>
+              <img class="sl-logo" src="data:image/png;base64,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" alt="TMGM" width="132" height="33">
+              <div class="sl-legend" id="slLegend" aria-label="Key"></div>
+              <div class="sl-foot"><span><b>Click any step</b> for details. <b>Click any underlined word</b> to read and copy its note. Top row: once per IB. Bottom row: each client, then monthly.</span><span>Sources: Aaron, Edwin, Fetra and Nick, 7 Oct to 11 Nov 2026</span></div>
+              <div class="pop" id="pop" role="region" aria-labelledby="popName" aria-live="polite" hidden>
+                <button type="button" class="pop-x" id="popX" aria-label="Close"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+                <div class="pop-top"><span class="pop-num" id="popNum"></span><span class="pop-chip" id="popChip"></span></div>
+                <span class="pop-st" id="popStage"></span>
+                <h3 id="popName"></h3>
+                <p id="popWhat"></p>
+                <p class="pop-lh" id="popWaysH" hidden></p>
+                <ol class="pop-ways" id="popWays" hidden></ol>
+                <div class="pop-tl" id="popTl" hidden></div>
+                <div class="pop-fl" id="popFl" hidden></div>
+                <p class="pop-note" id="popNote" hidden></p>
+                <dl>
+                  <div><dt>Owner</dt><dd id="popOwner"></dd></div>
+                  <div><dt>Where</dt><dd id="popWhere"></dd></div>
+                  <div><dt>How long</dt><dd id="popTime"></dd></div>
+                  <div><dt>Source</dt><dd class="src" id="popSrc"></dd></div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- one divider and slide per stage are added here by the script -->
+        <div class="fsn" id="fsn" role="group" aria-label="Slide controls">
+          <button type="button" id="fsPrev" aria-label="Previous slide"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M8.8 2.5L4.3 7l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <span id="fsPos" aria-live="polite"></span>
+          <button type="button" id="fsNext" aria-label="Next slide"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5.2 2.5L9.7 7l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+        </div>
+      </section>
+      <section class="ui-panel" id="panel-checklist" aria-labelledby="tab-checklist" hidden>
+        <div class="sb ck-sb" id="ckSb">
+          <button type="button" class="sb-btn sb-show" id="ckRailShow" aria-controls="rail" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6 2.8v10.4" stroke="currentColor" stroke-width="1.4"/></svg><span>Show tabs</span></button>
+          <span class="sb-gap"></span>
+          <button type="button" class="sb-btn" id="ckCopy" title="Copy every item as plain text, to paste into Teams or an email"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5.3" y="5.3" width="8.9" height="8.9" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.7 3.3v-.2a1.9 1.9 0 0 0-1.9-1.9H3.1a1.9 1.9 0 0 0-1.9 1.9v5.7a1.9 1.9 0 0 0 1.9 1.9h.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span>Copy as text</span></button>
+        </div>
+        <div class="ck-sheet" id="ckSheet" role="region" aria-label="Aaron's checklist"></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function(){
+'use strict';
+var SVGNS='http://www.w3.org/2000/svg';
+var reduce=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+function $(id){ return document.getElementById(id); }
+function r1(v){ return Math.round(v*10)/10; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ---------- tabs rail: hide and show ---------- */
+var shell=document.querySelector('.ui-shell'), hideBtn=$('railHide'), showBtn=$('railShow');
+function setCollapsed(c,save){
+  shell.classList.toggle('is-collapsed',c);
+  hideBtn.setAttribute('aria-expanded',String(!c));
+  showBtn.hidden=!c; $('ckRailShow').hidden=!c;
+  if(save){ try{ localStorage.setItem('finsfree-rail',c?'1':'0'); }catch(e){} }
+}
+var startCollapsed=false;
+try{ startCollapsed=localStorage.getItem('finsfree-rail')==='1'; }catch(e){}
+setCollapsed(startCollapsed,false);
+hideBtn.addEventListener('click',function(){ setCollapsed(true,true); showBtn.focus(); });
+showBtn.addEventListener('click',function(){ setCollapsed(false,true); hideBtn.focus(); });
+
+/* ---------- slides: fit the screen ---------- */
+var wrap=$('sw'), frame=$('sf'), slide=$('sl'), bar=$('sb'), fsBtn=$('fsBtn'), deck=$('deck');
+var WRAPS=[wrap], FRAMES=[frame], SLIDES=[slide];
+function fsEl(){ return document.fullscreenElement||document.webkitFullscreenElement||null; }
+function fit(){
+  if(fsEl()===deck){
+    var k=Math.min(window.innerWidth/1600,window.innerHeight/900);
+    SLIDES.forEach(function(s){ s.style.transform='translate(-50%,-50%) scale('+k+')'; });
+    return;
+  }
+  var W=wrap.clientWidth;
+  if(!W) return;
+  var availH=window.innerHeight-(bar.offsetHeight-4)-46;
+  var fw=Math.floor(Math.max(760,Math.min(W,availH*16/9))), fh=Math.round(fw*9/16);
+  FRAMES.forEach(function(f){ f.style.width=fw+'px'; f.style.height=fh+'px'; });
+  bar.style.width=Math.min(fw,W)+'px';
+  deck.style.setProperty('--fw',Math.min(fw,W)+'px');
+  SLIDES.forEach(function(s){ s.style.transform='scale('+(fw/1600)+')'; });
+}
+if(!(deck.requestFullscreen||deck.webkitRequestFullscreen)) fsBtn.hidden=true;
+if('ResizeObserver' in window) new ResizeObserver(fit).observe(wrap);
+window.addEventListener('resize',fit);
+
+/* ---------- the Finsfree flow: 15 steps, plus the branches ---------- */
+var STAGE={1:'Pick',2:'Build',3:'Get Pro',4:'Renew',5:'Review'};
+var LABEL={auto:'Automatic',partly:'Partly automatic',manual:'Manual',none:'No set owner',dec:'Decision'};
+/* status: an icon on a coloured token (bolt on green, person and bolt on blue, person on red); text stays white */
+var COLOR={auto:'#F3F6FF',partly:'#F3F6FF',manual:'#F3F6FF',none:'#FBBF24',dec:'#C9D5F0'};
+var R1=[145.5,363.7,581.8,800,1018.2,1236.3,1454.5];          /* row 1: 7 steps, once per IB */
+var C=[145.5,332.5,519.5,706.5,893.5,1080.5,1267.5,1454.5];  /* row 2: 8 steps, per client and then monthly */
+var R=C;
+var YH=278,Y1=412,Y2=652,YL=800,YS=508,XL=30;
+
+var NODES=[
+ {k:'n11',id:'1.1',st:'manual',shape:'term',x:R1[0],y:Y1,w:180,h:100,name:'Suggests IBs',sub:'AMs, from their own IBs',title:'Sales suggests IBs',
+  what:'Each AM suggests IBs from their own clients who could use a branded bot. Aaron\'s team sends a list for each country.',
+  owner:'The AMs in Aaron\'s sales teams',
+  where:'An Excel list per country, sent by Aaron',
+  time:'Not set. Vietnam\'s list came in on 10 Nov',
+  src:'Aaron (27 Oct, 10 Nov); Fetra\'s walkthrough (3 Nov)',
+  /* fuller version for the click-through card */
+  pop:{
+   what:'Each AM suggests IBs from their own clients who could use a branded bot. Fetra\'s guide to who fits best:',
+   waysH:'Who fits best',
+   ways:[
+    {h:'An active community',t:'A Telegram or WhatsApp group or channel where the IB can share the bot.'},
+    {h:'Education or market views',t:'IBs who teach or share market views, and want clients coming back every day.'},
+    {h:'A responsive team',t:'Someone on the IB\'s side who handles Pro requests fast, so clients keep using the bot.'}
+   ],
+   note:{lead:'Lists so far',t:'Vietnam: 3 IBs under Jack Tran, sent by Aaron on 10 Nov (TA ending 5749, 2096 and 3729). Malaysia and Korea: Aaron is checking with his team.'},
+   owner:'The AMs in Aaron\'s sales teams.',
+   where:'An Excel list per country, sent by Aaron.',
+   time:'Not set. Vietnam\'s list came in on 10 Nov.',
+   src:'Aaron (27 Oct, 10 Nov); Fetra\'s walkthrough (3 Nov)'
+  }},
+ {k:'n12',id:'1.2',st:'manual',shape:'box',x:R1[1],y:Y1,w:172,h:112,name:'Picks 1 to 2',sub:'Lucas and Aaron, per country',title:'Picks 1 to 2 IBs per country',
+  what:'We start with 1 to 2 IBs per country and test before adding more. If Malaysia and Korea aren\'t ready soon, Vietnam goes first.',
+  owner:'Lucas, agreed with Aaron and the IB\'s AM',
+  where:'Teams',
+  time:'Not known yet',
+  src:'Edwin (28 Oct); sales sync (10 Nov)',
+  pop:{
+   what:'Edwin asked us to start small: 1 to 2 bots per country, then test before adding more.',
+   waysH:'Where each country stands',
+   ways:[
+    {h:'Vietnam',t:'First in line. 2 IBs proposed: TA ending 5749, who runs education classes, and TA ending 3729, who runs a signal group. Lucas works directly with Jack Tran, their AM.'},
+    {h:'Malaysia',t:'Aaron is checking IBs with his team.'},
+    {h:'South Korea',t:'Aaron is checking IBs with the Korea team.'}
+   ],
+   note:{lead:'Good to know',t:'Each bot carries one IB link, so every pilot IB gets their own bot.'},
+   owner:'Lucas, agreed with Aaron and the IB\'s AM.',
+   where:'Teams.',
+   time:'Not known yet. Vietnam\'s picks were proposed on 10 Nov.',
+   src:'Edwin (28 Oct); sales sync (10 Nov); Fetra (19 Oct)'
+  }},
+ {k:'d13',id:'1.3',st:'manual',shape:'dia',x:R1[2],y:Y1,w:160,h:120,name:'Agrees to our terms?',title:'IB agrees to our terms',
+  what:'The AM explains how it works and what we expect. The IB agrees to Edwin\'s minimum, and understands the bot gives signals, not promised profit.',
+  owner:'The IB\'s AM, with Lucas',
+  where:'A call or chat with the IB',
+  time:'Not known yet',
+  src:'Edwin (3 Nov); Fetra\'s walkthrough (3 Nov); sales sync (10 Nov)',
+  pop:{
+   w:640,
+   what:'Before we build anything, the IB agrees to 3 things:',
+   ways:[
+    {h:'Edwin\'s minimum',t:'30 FTDs and USD 1,500 in first deposits in the first 2 months after going live, then at least 10 FTDs a month. Sales can ask an IB for more.'},
+    {h:'No promised profit',t:'The bot gives signals from the IB\'s own logic. Nobody promises win rates, profit or guarantees.'},
+    {h:'A Pro minimum',t:'The balance each client must keep in their TMGM account to use Pro, for example USD 50 in Indonesia. The IB agrees the amount with their AM. It\'s separate from Edwin\'s minimum, which is the IB\'s own target.'}
+   ],
+   note:{lead:'Why this comes first',t:'All 3 Vietnamese IBs tied bringing clients to the AI working: two said "if AI can make profit", one said "if the AI works". So we reset that before we build.'},
+   owner:'The IB\'s AM, with Lucas.',
+   where:'A call or chat with the IB.',
+   time:'Not known yet.',
+   src:'Edwin (3 Nov); Fetra\'s walkthrough (3 Nov); sales sync (10 Nov); Fetra (11 Nov)'
+  }},
+ {k:'h13',st:'manual',shape:'help',x:R1[2],y:YH,w:184,h:76,name:'Try the next IB',sub:'No bot for this one',rel:'Branch of step 1.3',stage:1,num:'1.3',
+  what:'If the IB won\'t agree to the terms, we don\'t build. We go back to the list and pick the next IB.',
+  owner:'Lucas and the AM',where:'The country\'s IB list',time:'Not known yet',src:'Edwin (30 Oct); Fetra\'s walkthrough (3 Nov)'},
+ {k:'n21',id:'2.1',st:'manual',shape:'box',x:R1[3],y:Y1,w:172,h:112,name:'Fills the request form',sub:'IB, with the AM',title:'IB fills the request form',
+  what:'The IB fills in Finsfree\'s request form with their brand, IB link and trading logic. The bot is built from what they put in.',
+  owner:'The IB, helped by their AM',
+  where:'ib.finsfree.com',
+  time:'Not known yet',
+  src:'Fetra\'s walkthrough (3 Nov); Fetra (11 Nov)',
+  pop:{
+   what:'The bot is built from what the IB puts in the request form, so it needs to be complete:',
+   ways:[
+    {h:'Their brand',t:'Logo, colours and a project name.'},
+    {h:'Their link and language',t:'The IB link, so clients sign up under them, and the language the bot should use.'},
+    {h:'Their logic',t:'How the signals should work, or Finsfree\'s default template, and how many free analyses a client gets.'}
+   ],
+   note:{lead:'Good to know',t:'The form is in English and Thai for now, so Vietnam can use English. Vietnamese comes later.'},
+   owner:'The IB, helped by their AM.',
+   where:'ib.finsfree.com',
+   time:'Not known yet.',
+   src:'Fetra\'s walkthrough (3 Nov); Fetra (11 Nov)'
+  }},
+ {k:'n22',id:'2.2',st:'manual',shape:'box',x:R1[4],y:Y1,w:172,h:112,name:'Builds the bot',sub:'Fetra\'s team, about 7 days',title:'Finsfree builds the bot',
+  what:'Fetra\'s team builds the IB\'s own branded Telegram bot from the request form, in about 7 days once the request is complete, then tests it on the IB\'s logic.',
+  owner:'Finsfree: Fetra\'s team and a freelance developer',
+  where:'Telegram',
+  time:'About 7 days after a complete request, plus testing',
+  src:'Fetra\'s walkthrough (3 Nov); Fetra (19 Oct, 11 Nov)',
+  pop:{
+   what:'Fetra\'s team builds the IB\'s own branded Telegram bot from the request form, then runs it on the IB\'s logic for a test before launch.',
+   waysH:'How long, once the request is complete',
+   ways:[
+    {h:'Telegram bot',t:'About 7 days to build, then a test run, often about a week. One recent bot took about 2 weeks from build to launch, because the IB changed their logic after testing.'},
+    {h:'AI website',t:'7 to 10 days, if the IB asks for one.'},
+    {h:'Indicator or EA',t:'About 5 days for an indicator. An EA takes longer, because it\'s tested on past data first.'}
+   ],
+   note:{lead:'Good to know',t:'Requests from several markets on the same day are handled first come, first served. All live bots run on Telegram. Zalo for Vietnam looks possible but would take longer, LINE is being tested for Thailand, and Korea\'s app isn\'t settled yet.'},
+   owner:'Finsfree: Fetra\'s team and a freelance developer.',
+   where:'Telegram.',
+   time:'About 7 days after a complete request, plus testing.',
+   src:'Fetra\'s walkthrough (3 Nov); Fetra (19 Oct, 11 Nov)'
+  }},
+ {k:'n23',id:'2.3',st:'manual',shape:'box',x:R1[5],y:Y1,w:172,h:112,name:'Checks the language',sub:'Local sales, like Jack',title:'Local sales checks the language',
+  what:'Fetra sends the bot\'s wording in English, then in the local language. Someone in the local sales team proofreads it before launch.',
+  owner:'Local sales (Vietnam: Jack Tran, to confirm)',
+  where:'A Word or Excel file from Fetra',
+  time:'Not known yet',
+  cnote:{lead:'To confirm:',text:'The language for each market. Vietnamese and Korean are possible, and Malaysia could be English or Malay.'},
+  src:'Fetra (3 and 11 Nov); Aaron (7 Oct)'},
+ {k:'n24',id:'2.4',st:'partly',shape:'box',x:R1[6],y:Y1,w:172,h:112,name:'Goes live',sub:'AM added as the approver',title:'Bot goes live',
+  what:'Fetra\'s team adds the AM as the bot\'s admin by their Telegram ID. Then the IB shares the bot with their community.',
+  owner:'Fetra\'s team sets it up; the IB shares it',
+  where:'Telegram, and the IB\'s own groups',
+  time:'Once the wording is checked',
+  src:'Fetra (11 Nov); sales sync (10 Nov)',
+  pop:{
+   what:'This is when the IB\'s clients can start using the bot.',
+   flFirst:1,
+   fl:{h:'How it goes live',
+    a:['AM sends Fetra their Telegram ID','Fetra adds the AM as admin','IB shares the bot with their community']},
+   note:{lead:'To confirm with Aaron',t:'Fetra can add the IB as an admin too, but then the IB gets the same Approve button. To keep the final say with the AM, we add only the AM.',ck:4},
+   owner:'Fetra\'s team sets it up, and the IB shares it.',
+   where:'Telegram, and the IB\'s own groups.',
+   time:'Once the wording is checked.',
+   src:'Fetra (11 Nov); sales sync (10 Nov)'
+  }},
+ {k:'n31',id:'3.1',st:'auto',shape:'box',x:C[0],y:Y2,w:152,h:112,name:'Tries the bot',sub:'Free analyses first',title:'Client tries the bot',
+  what:'A client in the IB\'s community starts the bot and gets a few free analyses. It\'s 3 by default, and an IB can ask for more.',
+  owner:'The client. The bot runs on its own',
+  where:'Telegram',
+  time:'Instant',
+  src:'Fetra\'s walkthrough (3 Nov)',
+  pop:{
+   w:640,
+   what:'A client in the IB\'s community starts the bot and gets a few free analyses. It\'s 3 by default, and an IB can ask for more, such as 5 or 10.',
+   waysH:'What each signal shows',
+   ways:[
+    {h:'The trade',t:'Buy or sell, entry, stop loss and take profit, from a fixed formula built on the IB\'s logic. The AI can\'t change it.'},
+    {h:'A short note',t:'2 to 3 sentences written by AI, and an AI confidence score based on past results.'},
+    {h:'Indicative prices',t:'Prices come from a data provider, so they can differ slightly from TMGM\'s, mainly by the spread.'}
+   ],
+   note:{lead:'Good to know',t:'Clients tap menu buttons and can\'t type to the AI, so it can\'t promise profit.'},
+   owner:'The client. The bot runs on its own.',
+   where:'Telegram.',
+   time:'Instant.',
+   src:'Fetra\'s walkthrough (3 Nov); Fetra (19 Oct, 11 Nov)'
+  }},
+ {k:'lk',st:'none',shape:'leak',x:C[0],y:YL,w:212,h:72,name:'Drops off',sub:'No set follow-up today',rel:'Branch of step 3.1',stage:3,num:'3.1',
+  what:'Most people who try a bot never open an account. In Indonesia, about 1 to 2% of people who start a bot become clients, and there\'s no set follow-up for the rest.',
+  owner:'No set owner',where:'Telegram',time:'Not tracked',src:'Fetra\'s walkthrough (3 Nov)',
+  pop:{
+   what:'Most people who try a bot never open an account, and nobody is set to follow them up.',
+   fl:{h:'Indonesia so far',
+    a:['About 15,000 people started a bot','About 1 to 2% became clients','About 200 clients with a first deposit'],
+    n:'Figures Fetra shared on 3 Nov. Salesforce stays the source of truth.'},
+   owner:'No set owner.',
+   where:'Telegram.',
+   time:'Not tracked.',
+   src:'Fetra\'s walkthrough (3 Nov)'
+  }},
+ {k:'n32',id:'3.2',st:'auto',shape:'box',x:C[1],y:Y2,w:152,h:112,name:'Opens an account',sub:'And deposits, via the IB link',title:'Client opens an account and deposits',
+  what:'The client opens a TMGM account through the IB link and deposits. The link puts them under the IB.',
+  owner:'The client',
+  where:'TMGM sign-up, through the IB link',
+  time:'Up to the client',
+  cnote:{lead:'To confirm:',text:'Which clients can get Pro: only new ones, or existing TMGM clients too. In Indonesia, clients under another IB sign up again through the new IB link.',ck:3},
+  src:'Fetra (8 Oct, 3 Nov)'},
+ {k:'n33',id:'3.3',st:'auto',shape:'box',x:C[2],y:Y2,w:152,h:112,name:'Asks for Pro',sub:'AM gets a Telegram alert',title:'Client asks for Pro',
+  what:'The client asks for Pro in the bot and sends their TMGM account number and a screenshot of their balance. The AM gets an alert with Approve and Reject buttons.',
+  owner:'The client asks. The bot alerts the AM',
+  where:'Telegram',
+  time:'The alert is instant',
+  src:'Fetra\'s walkthrough (3 Nov); Fetra (11 Nov)',
+  pop:{
+   what:'The client asks for Pro, and the bot tells the AM straight away.',
+   flFirst:1,
+   fl:{h:'What happens',
+    a:['Client taps Subscribe Pro','Sends their account number and a balance screenshot','AM gets Approve and Reject buttons']},
+   note:{lead:'Good to know',t:'Pending requests also show in the bot\'s admin panel. Each IB\'s bot is separate, and only that IB and their AM see its report.'},
+   owner:'The client asks. The bot alerts the AM.',
+   where:'Telegram, and the bot\'s admin panel.',
+   time:'The alert is instant.',
+   src:'Fetra\'s walkthrough (3 Nov); Fetra (11 Nov)'
+  }},
+ {k:'d34',id:'3.4',st:'manual',shape:'dia',x:C[3],y:Y2,w:160,h:120,name:'Meets the Pro minimum?',title:'AM checks the balance',
+  what:'The AM checks in Salesforce that the client is under this IB and their balance meets the Pro minimum agreed with the IB, then taps Approve.',
+  owner:'The IB\'s AM, as Aaron agreed for now',
+  where:'Salesforce, then Telegram',
+  time:'Within 24 hours (to confirm)',
+  src:'Sales sync (10 Nov); Fetra (11 Nov)',
+  pop:{
+   w:640,
+   what:'Finsfree can\'t see client balances, so a person has to check. On 10 Nov Aaron agreed that the IB\'s AM gives the final OK, for now.',
+   waysH:'What the AM checks',
+   ways:[
+    {h:'The client is under this IB',t:'They signed up through the IB link.'},
+    {h:'The balance is high enough',t:'It meets the Pro minimum the AM and the IB agreed. It isn\'t set in the bot, so each IB can have its own.'},
+    {h:'Then taps Approve',t:'Right in the Telegram alert, and Pro switches on for 30 days.'}
+   ],
+   tl:{h:'Pro minimums so far, lowest to highest',
+    items:[{d:'USD 30',t:'One Thai IB\'s bot'},{d:'USD 50',t:'Indonesia\'s bots'},{d:'USD 500',t:'Aaron\'s suggestion (3 Nov)'},{d:'USD 1,000',t:'An Indonesian IB\'s AI website'}],
+    n:'Not set yet for Malaysia, Vietnam or Korea. It\'s separate from Edwin\'s minimum, which is the IB\'s own target.'},
+   note:{lead:'To confirm',t:'The Pro minimum for each pilot IB, and how fast the AM should approve.',ck:2},
+   owner:'The IB\'s AM, as Aaron agreed for now.',
+   where:'Salesforce, then the Telegram alert.',
+   time:'Not set yet. A Thai IB\'s request asks for activation within 24 hours.',
+   src:'Sales sync (10 Nov); Fetra (11 Nov); Fetra\'s walkthrough (3 Nov)'
+  }},
+ {k:'h34',st:'manual',shape:'help',x:C[3],y:YL,w:184,h:76,name:'AM taps Reject',sub:'No Pro for now',rel:'Branch of step 3.4',stage:3,num:'3.4',
+  what:'If the balance is below the Pro minimum, the AM taps Reject, and the client doesn\'t get Pro.',
+  owner:'The IB\'s AM',where:'Telegram',time:'Not set yet',src:'Fetra (11 Nov)'},
+ {k:'n35',id:'3.5',st:'auto',shape:'box',x:C[4],y:Y2,w:152,h:112,name:'Pro for 30 days',sub:'Unlocks in the bot',title:'Client gets Pro for 30 days',
+  what:'Once the AM approves, the client gets Pro for 30 days: unlimited analyses instead of a few free ones. It\'s free for TMGM clients who meet the Pro minimum.',
+  owner:'The bot, once the AM approves',
+  where:'Telegram',
+  time:'30 days',
+  src:'Fetra (8 Oct); Fetra\'s walkthrough (3 Nov)',
+  pop:{
+   what:'Once the AM taps Approve, Pro switches on in the bot for 30 days. It\'s free for TMGM clients under the IB who meet the Pro minimum.',
+   waysH:'Free vs Pro',
+   ways:[
+    {h:'Before Pro',t:'A few free analyses to try the bot, 3 by default. After that, the client needs Pro to keep using it.'},
+    {h:'With Pro',t:'Unlimited analyses for 30 days, so the client can check a pair whenever they want.'},
+    {h:'To keep Pro',t:'The client applies again each month, and the AM checks their balance still meets the Pro minimum.'}
+   ],
+   note:{lead:'Good to know',t:'Pro has been free for TMGM clients since August 2026. Before that, IBs sold access for about USD 20.'},
+   owner:'The bot, once the AM approves.',
+   where:'Telegram.',
+   time:'30 days.',
+   src:'Fetra\'s walkthrough (3 Nov); Fetra (8 Oct)'
+  }},
+ {k:'n41',id:'4.1',st:'manual',shape:'box',x:C[5],y:Y2,w:152,h:112,name:'Renews monthly',sub:'AM checks the balance again',title:'Client renews each month',
+  what:'To keep Pro, the client applies again each month, and the bot reminds them before it ends. The AM checks in Salesforce that the balance still meets the Pro minimum and approves, just like step 3.4.',
+  owner:'The IB\'s AM',
+  where:'Salesforce, then Telegram',
+  time:'Every month',
+  src:'Sales sync (10 Nov); Fetra (8 Oct, 11 Nov); Fetra\'s walkthrough (3 Nov)',
+  pop:{
+   what:'To keep Pro, the client applies again each month, and the AM checks again.',
+   tl:{h:'A client\'s first 2 months',
+    items:[{d:'Day 0',t:'AM approves Pro',start:1},{d:'Day 30',t:'Applies again',gap:'30 days'},{d:'Day 60',t:'Applies again',gap:'30 days'}],
+    n:'The bot reminds the client before Pro ends, for example 7, 3 and 1 day before. Each time, the AM checks the balance still meets the Pro minimum, just like step 3.4.'},
+   note:{lead:'Below the Pro minimum',t:'The AM taps Reject, and the client\'s Pro ends.'},
+   owner:'The IB\'s AM.',
+   where:'Salesforce, then the Telegram alert.',
+   time:'Every month.',
+   src:'Sales sync (10 Nov); Fetra (8 Oct, 11 Nov); Fetra\'s walkthrough (3 Nov)'
+  }},
+ {k:'n51',id:'5.1',st:'none',shape:'box',x:C[6],y:Y2,w:152,h:112,name:'Monthly IB check',sub:'FTDs against Edwin\'s minimum',flag:'No set owner',
+  what:'Each month, someone checks the IB\'s new clients against Edwin\'s minimum. For the new markets, who does it isn\'t set yet.',
+  owner:'No set owner (Fetra tracks Indonesia today)',
+  where:'Salesforce, and Fetra\'s tracking report',
+  time:'Monthly',
+  src:'Edwin (3 Nov); Fetra\'s walkthrough (3 Nov)',
+  pop:{
+   what:'Each month, someone checks the IB\'s new clients against Edwin\'s minimum. For the new markets, who does it isn\'t set yet.',
+   tl:{h:'Edwin\'s minimum, from go-live',
+    items:[{d:'Go live',t:'The clock starts',start:1},{d:'Month 2',t:'30 FTDs and USD 1,500 in total',gap:'2 months'},{d:'Month 3 on',t:'10 FTDs a month'}],
+    n:'Miss it for more than 2 months, and Finsfree stops maintaining the bot.'},
+   note:{lead:'To confirm with Aaron',t:'Who checks each IB\'s numbers every month, and whether Edwin\'s minimum is the bar in all three markets. Fetra will make the same tracking report for the new markets, and Salesforce stays the source of truth.',ck:[1,5]},
+   owner:'No set owner yet. Fetra tracks Indonesia\'s numbers today.',
+   where:'Salesforce, and Fetra\'s tracking report.',
+   time:'Monthly.',
+   src:'Edwin (3 Nov); Fetra\'s walkthrough (3 Nov)'
+  }},
+ {k:'n52',id:'5.2',st:'manual',shape:'term',x:C[7],y:Y2,w:172,h:100,name:'Keeps the bot',sub:'If Edwin\'s minimum is met',title:'IB keeps the bot',
+  what:'As long as the IB meets Edwin\'s minimum, Finsfree keeps their bot running and maintained.',
+  owner:'Finsfree (Fetra\'s team), using Edwin\'s rule',
+  where:'Telegram',
+  time:'Month to month',
+  src:'Edwin (3 Nov); Fetra (30 Oct)',
+  pop:{
+   what:'As long as the IB meets Edwin\'s minimum, Finsfree keeps their bot running, including fixes and small changes.',
+   note:{lead:'Why there\'s a minimum',t:'Each bot costs about USD 80 to 100 to build, plus a small monthly running cost. Edwin set this as TMGM\'s minimum, and sales can ask an IB for more.'},
+   owner:'Finsfree (Fetra\'s team), using Edwin\'s rule.',
+   where:'Telegram.',
+   time:'Month to month.',
+   src:'Edwin (3 Nov); Fetra (19 and 30 Oct)'
+  }},
+ {k:'lk2',st:'manual',shape:'leak',x:C[7],y:YL,w:212,h:72,name:'Bot stops',sub:'After 2 missed months',rel:'Branch of step 5.2',stage:5,num:'5.2',
+  what:'If the IB misses Edwin\'s minimum for more than 2 months, Finsfree stops maintaining the bot. Fetra has already shut down one Indonesian IB\'s tool for not bringing the agreed FTDs.',
+  owner:'Finsfree (Fetra\'s team)',where:'Telegram',time:'After more than 2 missed months',src:'Edwin (3 Nov); Fetra (30 Oct)'}
+];
+var EDGES=[
+ {k:'e1',f:'n11',t:'n12',fs:'right',ts:'left'},
+ {k:'e2',f:'n12',t:'d13',fs:'right',ts:'left'},
+ {k:'e3',f:'d13',t:'n21',fs:'right',ts:'left',lab:'Yes'},
+ {k:'e4',f:'d13',t:'h13',fs:'top',ts:'bottom',br:1,lab:'No'},
+ {k:'e5',f:'h13',t:'n12',fs:'left',ts:'top',br:1},
+ {k:'e6',f:'n21',t:'n22',fs:'right',ts:'left'},
+ {k:'e7',f:'n22',t:'n23',fs:'right',ts:'left'},
+ {k:'e8',f:'n23',t:'n24',fs:'right',ts:'left'},
+ {k:'e12',f:'n24',t:'n31',fs:'bottom',ts:'left',pts:function(a,b){ return [a,{x:a.x,y:YS},{x:XL,y:YS},{x:XL,y:b.y},b]; }},
+ {k:'e13',f:'n31',t:'n32',fs:'right',ts:'left'},
+ {k:'e14',f:'n31',t:'lk',fs:'bottom',ts:'top',lk:1,lab:'No deposit',labDx:58},
+ {k:'e15',f:'n32',t:'n33',fs:'right',ts:'left'},
+ {k:'e16',f:'n33',t:'d34',fs:'right',ts:'left'},
+ {k:'e17',f:'d34',t:'n35',fs:'right',ts:'left',lab:'Yes'},
+ {k:'e18',f:'d34',t:'h34',fs:'bottom',ts:'top',br:1,lab:'No'},
+ {k:'e19',f:'n35',t:'n41',fs:'right',ts:'left'},
+ {k:'e20',f:'n41',t:'n51',fs:'right',ts:'left'},
+ {k:'e21',f:'n51',t:'n52',fs:'right',ts:'left'},
+ {k:'e22',f:'n52',t:'lk2',fs:'bottom',ts:'top',lk:1,lab:'If not',labDx:40}
+];
+var RUN=['e1','e2','e3','e6','e7','e8','e12','e13','e15','e16','e17','e19','e20','e21'];
+var STAGES=[
+ {n:1,x0:R1[0]-90,x1:R1[2]+86,y:182},
+ {n:2,x0:R1[3]-86,x1:R1[6]+86,y:182},
+ {n:3,x0:C[0]-86,x1:C[4]+80,y:528},
+ {n:4,x0:C[5]-78,x1:C[5]+78,y:528},
+ {n:5,x0:C[6]-78,x1:C[7]+86,y:528}
+];
+var NM={}, EM={};
+
+/* ---------- draw ---------- */
+function unit(a,p){ var dx=a[0]-p[0], dy=a[1]-p[1], L=Math.sqrt(dx*dx+dy*dy)||1; return [dx/L,dy/L]; }
+function diaPath(w,h,r){
+  var P=[[w/2,1],[w-1,h/2],[w/2,h-1],[1,h/2]], d='';
+  for(var i=0;i<4;i++){
+    var p=P[i], ua=unit(P[(i+3)%4],p), ub=unit(P[(i+1)%4],p);
+    d+=(i?' L':'M')+r1(p[0]+ua[0]*r)+' '+r1(p[1]+ua[1]*r)+' Q'+r1(p[0])+' '+r1(p[1])+' '+r1(p[0]+ub[0]*r)+' '+r1(p[1]+ub[1]*r);
+  }
+  return d+' Z';
+}
+var DIA_R=11;
+function anchor(n,side){
+  var x0=n.x-n.w/2, y0=n.y-n.h/2, inH=0, inV=0;
+  if(n.shape==='dia'){
+    var hw=n.w/2, hh=n.h/2, L=Math.sqrt(hw*hw+hh*hh);
+    inH=1+0.5*DIA_R*hw/L; inV=1+0.5*DIA_R*hh/L;
+  }
+  if(side==='left') return {x:x0+inH,y:n.y};
+  if(side==='right') return {x:x0+n.w-inH,y:n.y};
+  if(side==='top') return {x:n.x,y:y0+inV};
+  return {x:n.x,y:y0+n.h-inV};
+}
+function isH(s){ return s==='left'||s==='right'; }
+function route(a,as,b,bs){
+  if(isH(as)&&isH(bs)) return Math.abs(a.y-b.y)<1.5?[a,{x:b.x,y:a.y}]:[a,{x:(a.x+b.x)/2,y:a.y},{x:(a.x+b.x)/2,y:b.y},b];
+  if(!isH(as)&&!isH(bs)) return Math.abs(a.x-b.x)<1.5?[a,{x:a.x,y:b.y}]:[a,{x:a.x,y:(a.y+b.y)/2},{x:b.x,y:(a.y+b.y)/2},b];
+  if(!isH(as)) return [a,{x:a.x,y:b.y},b];
+  return [a,{x:b.x,y:a.y},b];
+}
+function dist(p,q){ var dx=q.x-p.x, dy=q.y-p.y; return Math.sqrt(dx*dx+dy*dy); }
+function towards(p,q,r){ var L=dist(p,q)||1; return {x:p.x+(q.x-p.x)/L*r,y:p.y+(q.y-p.y)/L*r}; }
+function pathD(pts){
+  var d='M'+r1(pts[0].x)+' '+r1(pts[0].y);
+  for(var i=1;i<pts.length-1;i++){
+    var p=pts[i], r=Math.min(16,dist(pts[i-1],p)/2,dist(p,pts[i+1])/2), p1=towards(p,pts[i-1],r), p2=towards(p,pts[i+1],r);
+    d+=' L'+r1(p1.x)+' '+r1(p1.y)+' Q'+r1(p.x)+' '+r1(p.y)+' '+r1(p2.x)+' '+r1(p2.y);
+  }
+  var z=pts[pts.length-1];
+  return d+' L'+r1(z.x)+' '+r1(z.y);
+}
+function svgEl(tag,attrs){ var el=document.createElementNS(SVGNS,tag); for(var k in attrs) el.setAttribute(k,attrs[k]); return el; }
+
+/* stage ribbons: hover or click one to light up its steps */
+/* one clearly different colour per stage: orange, lime, cyan, violet, pink */
+var STAGE_C={1:['#FDBA74','#F97316'],2:['#BEF264','#A3E635'],3:['#67E8F9','#22D3EE'],4:['#C4B5FD','#A78BFA'],5:['#F9A8D4','#F472B6']};
+function rgba(hex,a){ var v=parseInt(hex.slice(1),16); return 'rgba('+(v>>16)+','+((v>>8)&255)+','+(v&255)+','+a+')'; }
+STAGES.forEach(function(s){
+  var d=document.createElement('div');
+  d.className='sg'+((s.x1-s.x0)<170?' sg-short':'');
+  d.style.left=r1(s.x0)+'px'; d.style.top=s.y+'px'; d.style.width=r1(s.x1-s.x0)+'px';
+  d.style.setProperty('--g1',STAGE_C[s.n][0]); d.style.setProperty('--g2',STAGE_C[s.n][1]);
+  d.style.setProperty('--gl',rgba(STAGE_C[s.n][1],.55)); d.style.setProperty('--gf',rgba(STAGE_C[s.n][1],.3));
+  d.innerHTML='<span class="sg-w"><button type="button" class="sg-r" aria-pressed="false" aria-label="Stage '+s.n+', '+STAGE[s.n]+'. Light up its steps"><b>'+s.n+'</b><span>'+STAGE[s.n]+'</span></button></span><i class="sg-l" aria-hidden="true"></i>';
+  slide.insertBefore(d,$('pop'));
+  s.el=d; s.btn=d.querySelector('.sg-r');
+});
+
+/* steps */
+NODES.forEach(function(n,i){
+  NM[n.k]=n;
+  var b=document.createElement('button');
+  b.type='button';
+  b.className='nd is-'+n.shape+' st-'+n.st;
+  b.setAttribute('data-k',n.k);
+  b.setAttribute('aria-controls','pop');
+  b.setAttribute('aria-expanded','false');
+  b.style.left=r1(n.x-n.w/2)+'px'; b.style.top=r1(n.y-n.h/2)+'px';
+  b.style.width=n.w+'px'; b.style.height=n.h+'px';
+  var h='';
+  if(n.shape==='dia') h+='<svg class="dia" viewBox="0 0 '+n.w+' '+n.h+'" width="'+n.w+'" height="'+n.h+'" aria-hidden="true" focusable="false"><path d="'+diaPath(n.w,n.h,DIA_R)+'"/></svg>';
+  if(n.id) h+='<span class="nd-b" aria-hidden="true"><i class="tk"></i>'+n.id+'</span>';
+  h+='<span class="nd-n">'+esc(n.name)+'</span>';
+  if(n.sub) h+='<span class="nd-s">'+esc(n.sub)+'</span>';
+  if(n.flag) h+='<span class="nd-f" aria-hidden="true">'+esc(n.flag)+'</span>';
+  b.innerHTML=h;
+  var lab=n.id?('Step '+n.id+': '+(n.title||n.name)+(n.shape==='dia'?', decision: '+n.name:'')+'. '+LABEL[n.st]+'.'):(n.name+'. '+n.rel+'.');
+  b.setAttribute('aria-label',lab);
+  slide.insertBefore(b,$('pop'));
+  n.el=b;
+});
+
+/* leak note */
+var note=document.createElement('div');
+note.className='leak-note'; note.setAttribute('aria-hidden','true');
+note.style.left=r1(NM.lk.x+NM.lk.w/2+18)+'px'; note.style.top=NM.lk.y+'px';
+note.innerHTML='<svg viewBox="0 0 30 12"><path d="M29 6H3M8 1L2.5 6 8 11" fill="none" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>We lose clients here';
+slide.insertBefore(note,$('pop'));
+var note2=document.createElement('div');
+note2.className='leak-note is-r'; note2.setAttribute('aria-hidden','true');
+note2.style.left=r1(NM.lk2.x-NM.lk2.w/2-18)+'px'; note2.style.top=NM.lk2.y+'px';
+note2.innerHTML='And IBs here<svg viewBox="0 0 30 12"><path d="M1 6H27M22 1L27.5 6 22 11" fill="none" stroke="#FCD34D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+slide.insertBefore(note2,$('pop'));
+
+/* connectors */
+var gE=$('gEdges');
+EDGES.forEach(function(e){
+  EM[e.k]=e;
+  var A=NM[e.f], B=NM[e.t], a=anchor(A,e.fs), b=anchor(B,e.ts);
+  var pts=e.pts?e.pts(a,b):route(a,e.fs,b,e.ts);
+  var tip=pts[pts.length-1], pr=pts[pts.length-2];
+  var L=dist(pr,tip)||1, ux=(tip.x-pr.x)/L, uy=(tip.y-pr.y)/L, AL=11, AW=5.5;
+  var bx=tip.x-ux*AL, by=tip.y-uy*AL, nx=tip.x-ux*AL*0.62, ny=tip.y-uy*AL*0.62;
+  var lp=pts.slice(); lp[lp.length-1]={x:tip.x-ux*(AL-3),y:tip.y-uy*(AL-3)};
+  e.d=pathD(lp);
+  var cls=e.lk?' is-lk':(e.br?' is-br':'');
+  var g=svgEl('g',{'class':'fg'});
+  g.appendChild(svgEl('path',{'class':'fe'+cls,d:e.d}));
+  g.appendChild(svgEl('path',{'class':'ff'+cls,d:e.d}));
+  g.appendChild(svgEl('path',{'class':'fa'+cls,d:'M'+r1(tip.x)+' '+r1(tip.y)+' L'+r1(bx-uy*AW)+' '+r1(by+ux*AW)+' L'+r1(nx)+' '+r1(ny)+' L'+r1(bx+uy*AW)+' '+r1(by-ux*AW)+' Z'}));
+  gE.appendChild(g);
+  e.g=g;
+  if(e.lab){
+    var p0=pts[0], p1=pts[1], cx, cy;
+    if(Math.abs(p1.y-p0.y)<1){ var sx=p1.x>p0.x?1:-1; cx=p0.x+sx*Math.min(21,Math.abs(p1.x-p0.x)/2); cy=p0.y-18; }
+    else { cx=p0.x+(e.labDx||28); cy=(p0.y+p1.y)/2; }
+    var chip=document.createElement('div');
+    chip.className='ec'+(e.lk?' lk':(e.lab==='Yes'?' yes':''));
+    chip.setAttribute('aria-hidden','true');
+    chip.style.left=r1(cx)+'px'; chip.style.top=r1(cy)+'px';
+    chip.textContent=e.lab;
+    slide.insertBefore(chip,$('pop'));
+    e.chip=chip;
+  }
+});
+
+/* light up one stage */
+var pinned=0;
+function stageOf(n){ return n.id?parseInt(n.id,10):n.stage; }
+function hl(st){
+  slide.classList.toggle('hl',!!st);
+  NODES.forEach(function(n){ n.el.classList.toggle('in-hl',!!st&&stageOf(n)===st); });
+  EDGES.forEach(function(e){ if(e.chip) e.chip.classList.toggle('in-hl',!!st&&stageOf(NM[e.f])===st); });
+  note.classList.toggle('in-hl',st===3);
+  note2.classList.toggle('in-hl',st===5);
+  STAGES.forEach(function(s){ s.el.classList.toggle('is-hl',s.n===st); s.el.classList.toggle('is-pin',pinned===s.n); s.btn.setAttribute('aria-pressed',String(pinned===s.n)); });
+}
+STAGES.forEach(function(s){
+  s.btn.addEventListener('mouseenter',function(){ if(!pinned) hl(s.n); });
+  s.btn.addEventListener('mouseleave',function(){ if(!pinned) hl(0); });
+  s.btn.addEventListener('focus',function(){ if(!pinned) hl(s.n); });
+  s.btn.addEventListener('blur',function(){ if(!pinned) hl(0); });
+  s.btn.addEventListener('click',function(){ pinned=(pinned===s.n)?0:s.n; hl(pinned); });
+});
+document.addEventListener('click',function(ev){
+  var t=ev.target;
+  if(!pinned||(t.closest&&(t.closest('.sg-r')||t.closest('.nd')||t.closest('.pop')))) return;
+  pinned=0; hl(0);
+});
+document.addEventListener('keydown',function(ev){ if(ev.key==='Escape'&&pinned&&!popFor){ pinned=0; hl(0); } });
+
+/* legend */
+var counts={auto:0,partly:0,manual:0,none:0};
+NODES.forEach(function(n){ if(n.id) counts[n.st]++; });
+$('slLegend').innerHTML=['auto','partly','manual','none'].map(function(s){
+  return '<span class="lg st-'+s+'" style="--c:'+COLOR[s]+'"><i class="tk"></i>'+LABEL[s]+' <b>'+counts[s]+'</b></span>';
+}).join('');
+
+/* ---------- the step card ---------- */
+var pop=$('pop'), popFor=null;
+/* keep "3 Nov" and "step 2.4" together when lines wrap */
+function nb(t){ return String(t).replace(/(\d) (?=(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b)/g,'$1\u00a0').replace(/\bstep (?=\d)/g,'step\u00a0').replace(/Sales Ops/g,'Sales\u00a0Ops').replace(/ in the CRM/g,' in\u00a0the\u00a0CRM').replace(/IB Portal/g,'IB\u00a0Portal').replace(/(\d) (?=(days?|hours?|minutes?|lots?)\b)/g,'$1\u00a0'); }
+/* words with a hover note: the first mention in each block gets a dotted underline */
+/* hover notes: anything someone new to the project may need to look up.
+   t = what it is, l = short list, p = more context, href = also a link (opens in a new tab), src = where it came from */
+var GLOSS={
+ 'Finsfree':{t:'TMGM\'s own in-house program, run by Fetra\'s team in Indonesia with a freelance developer. It gives an IB AI trading tools under the IB\'s own brand: Telegram signal bots, an AI website, and MT4 or MT5 indicators and EAs.',
+  p:'Clients see the IB\'s brand, and the tools aren\'t presented as a TMGM product. In Thailand the same program is called TradeMitr. In Indonesia it has brought about 200 depositing clients and about USD 18,000 in first deposits so far (Fetra, 3 Nov).',
+  src:'Fetra (8 Oct, 3 Nov); Edwin (10 Nov)'},
+ 'Pro':{t:'The full version of the IB\'s bot. It\'s free for TMGM clients: the client opens a TMGM account through the IB link, keeps the Pro minimum in it, and their AM approves. It lasts 30 days, then the client applies again.',
+  l:['Without Pro: a few free analyses to try the bot, 3 by default, then the client needs Pro.','With Pro: unlimited analyses for 30 days.','Free for TMGM clients since August 2026. Before that, IBs sold access for about USD 20 (Rp 300,000).'],
+  src:'Fetra\'s walkthrough (3 Nov); Fetra (8 Oct, 11 Nov)'},
+ 'free analyses':{name:'Free analyses',t:'What a client gets before Pro: a few tries of the IB\'s bot. Each try analyses one pair on one timeframe and returns a full signal. It\'s 3 by default, and an IB can ask for more, such as 5 or 10.',
+  p:'If the market is closed, the analysis is cancelled and no try is used. After the free tries, the client needs a TMGM account under the IB and an approved Pro request to keep using the bot.',
+  src:'Fetra\'s walkthrough (3 Nov); Fetra (19 Oct)'},
+ 'Pro minimum':{t:'The balance a client must keep in their TMGM account to get Pro, and to keep it each month. The AM checks it in Salesforce. There\'s no standard amount: it isn\'t set in the bot, and each IB agrees their own with their AM, as long as the IB meets Edwin\'s minimum. So it can differ between IBs in the same country. Examples so far:',
+  l:['Indonesia\'s bots: USD 50','An Indonesian IB\'s AI website: USD 1,000 kept in the account, for lifetime access','One Thai IB\'s bot: USD 30, and access is suspended after 14 days without use','A Thai IB\'s request, under review on 3 Nov, sets tiers by net deposit: USD 500 gets an indicator for 30 days, USD 2,000 adds a dashboard for 60 days, and only USD 3,500 adds Pro signals, for 90 days','Aaron\'s suggestion on 3 Nov: about USD 500 instead of USD 50'],
+  p:'Not the same as Edwin\'s minimum, which is the IB\'s own target, counted in FTDs.',
+  src:'Partner Team update (30 Oct); Fetra\'s walkthrough (3 Nov); Fetra (11 Nov); Aaron (3 and 10 Nov)'},
+ 'Edwin\'s minimum':{t:'What an IB must bring TMGM to keep their Finsfree bot. Edwin set it on 3 Nov as one standard for all IBs, after Nick asked for one on 30 Oct.',
+  l:['First 2 months after going live: 30 FTDs, and USD 1,500 in first deposits in total','Every month after that: at least 10 FTDs','Missed for more than 2 months: Finsfree stops maintaining the bot'],
+  p:'It\'s TMGM\'s floor, and sales can ask an IB for more. Edwin kept it low while we test, and plans to raise it once there are success cases outside Indonesia. Aaron expects more from Korean IBs. It\'s the IB\'s target, separate from the Pro minimum each client keeps.',
+  src:'Edwin (3 Nov); Nick (30 Oct); Aaron (3 Nov)'},
+ 'FTD':{pl:1,t:'First-time deposit: a new client\'s first deposit with TMGM. It\'s how TMGM counts new clients, and what Edwin\'s minimum measures: how many FTDs an IB brings and their total amount.',
+  p:'Two of the Vietnam IBs now place their clients with other brokers. If clients who used to trade with TMGM come back, whether they count as new FTDs is still to check.',
+  src:'Edwin (3 Nov); Vietnam IB list (10 Nov)'},
+ 'request form':{name:'Request form',href:'https://ib.finsfree.com/',
+  t:'Finsfree\'s online form where the IB asks for their bot. The bot is built from what goes in, so it should be complete before it\'s sent.',
+  l:['Brand: logo, colours and a project name','The IB link, so clients sign up under the IB','The bot\'s language, and how many free analyses a client gets','The trading logic, or Finsfree\'s default template'],
+  p:'In English and Thai for now, so Vietnam can use English. Once it\'s sent, Fetra\'s team builds the bot in about 7 days, then tests it.',
+  src:'Fetra (3 and 11 Nov)'},
+ 'ib.finsfree.com':{name:'Request form',href:'https://ib.finsfree.com/',
+  t:'Finsfree\'s online form where the IB asks for their bot. The bot is built from what goes in, so it should be complete before it\'s sent.',
+  l:['Brand: logo, colours and a project name','The IB link, so clients sign up under the IB','The bot\'s language, and how many free analyses a client gets','The trading logic, or Finsfree\'s default template'],
+  p:'In English and Thai for now, so Vietnam can use English. Once it\'s sent, Fetra\'s team builds the bot in about 7 days, then tests it.',
+  src:'Fetra (3 and 11 Nov)'},
+ 'IB link':{t:'The IB\'s own TMGM sign-up link. Clients who open an account through it sit under the IB in Salesforce. That\'s what lets them ask for Pro, and it\'s how their FTDs count toward Edwin\'s minimum.',
+  p:'Each bot carries one IB link, so each IB gets their own bot. In Indonesia, clients already under another IB sign up again through the new link. Whether existing TMGM clients can move under the IB instead is still to confirm with Aaron.',
+  src:'Fetra (8 and 19 Oct, 3 Nov)'},
+ 'Subscribe Pro':{t:'The button in the bot where a client asks for Pro. They send their TMGM account number and a screenshot of their account balance. Each IB can ask for slightly different details.',
+  p:'The request goes straight to the approvers as a Telegram alert with Approve and Reject buttons, and also shows in the bot\'s admin panel.',
+  src:'Fetra\'s walkthrough (3 Nov); Fetra (11 Nov)'},
+ 'Telegram ID':{t:'The number that identifies a Telegram account. It isn\'t the @username, and Telegram doesn\'t show it in the app by default.',
+  p:'Fetra adds each bot\'s approvers by Telegram ID, so every AM sends theirs to Fetra before go-live. Approvers then get each Pro request as a Telegram alert with Approve and Reject buttons.',
+  src:'Fetra (11 Nov)'},
+ 'Salesforce':{t:'TMGM\'s client system. Before approving Pro, the AM checks here that the client sits under the IB and that their balance meets the Pro minimum. Finsfree has no access to it, which is why a person has to approve.',
+  p:'Salesforce is also the source of truth for each IB\'s FTDs, because Fetra\'s tracker can count an account twice.',
+  src:'Fetra (18 Oct, 3 and 11 Nov)'},
+ 'admin panel':{t:'The bot\'s back office. Pending Pro requests show here as well as in the approvers\' Telegram alerts.',
+  p:'Each IB\'s bot is separate, and only that IB and their AM see its report.',
+  src:'Fetra (11 Nov)'},
+ 'signal':{pl:1,t:'What the bot gives for each analysis: buy or sell, entry, stop loss and take profit, an AI confidence score, a short note and a risk disclaimer. The bot also shows key levels such as support and resistance.',
+  p:'Prices come from a data provider (Twelve Data), not TMGM\'s own feed, so they can differ slightly from TMGM\'s, mainly by the spread. Treat them as indicative.',
+  src:'Fetra (8 and 19 Oct, 3 and 11 Nov)'},
+ 'AI confidence score':{t:'A percentage on each signal, up to 90%, based on how the signal\'s formula did when tested on past prices. It\'s a guide, not a promise of results.',
+  p:'The trade itself (buy or sell, entry, stop loss, take profit) comes from a fixed formula built on the IB\'s logic. The AI only writes the short note and can\'t change the trade.',
+  src:'Fetra (19 Oct); Fetra\'s walkthrough (3 Nov)'},
+ 'AI website':{t:'Finsfree\'s web version of the tool. One click analyses a pair on every timeframe at once, where the Telegram bot does one timeframe per click. It also adds risk-reward, an invalidation price and position-size guidance.',
+  p:'It isn\'t public: clients register through the IB\'s link, the admin approves, and the login is sent by email or chat. It can sit on the IB\'s own domain, and takes 7 to 10 days to build.',
+  src:'Fetra\'s walkthrough (3 Nov); Finsfree product deck'},
+ 'indicator':{t:'A custom chart tool for MT4 or MT5, built on the IB\'s own logic on request through Sales. It takes about 5 days to build.',
+  p:'It can be locked to one TMGM account number and to a set number of days, so it can\'t be used at other brokers.',
+  src:'Fetra\'s walkthrough (3 Nov)'},
+ 'EA':{t:'Expert Advisor: a program that places trades on its own in MetaTrader (MT4 or MT5). Finsfree builds one on the IB\'s logic on request through Sales, and tests it on past data first, so it takes longer than a bot.',
+  p:'Each EA is locked to one TMGM account number and can be time-limited, for example to 30 days.',
+  src:'Fetra\'s walkthrough (3 Nov)'},
+ 'Zalo':{t:'The messaging app most people use in Vietnam. It has a bot setup like Telegram\'s, so a Zalo bot looks possible, but Finsfree hasn\'t built one yet, so it would take longer.',
+  src:'Fetra (11 Nov)'},
+ 'LINE':{t:'The messaging app most people use in Thailand. Angelo said about 90% of people there see Telegram as a scam app, so Finsfree is testing whether bots work on LINE.',
+  src:'Angelo and Edwin (10 Nov); Fetra (11 Nov)'},
+ 'KakaoTalk':{t:'South Korea\'s main messaging app. Which app Korea\'s bot should use isn\'t settled yet: on 10 Nov Edwin hoped LINE could cover Korea too, and Korea hasn\'t been raised with Fetra.',
+  src:'Edwin (10 Nov); Fetra (11 Nov)'}
+};
+/* one pass over the text, longest names first, so a note never lands inside another note.
+   Pass the same "used" object for several pieces of one card, so each word is underlined once per card */
+var GKEYS=Object.keys(GLOSS).sort(function(a,b){ return b.length-a.length; });
+var GRX=new RegExp('(^|[^A-Za-z0-9_-])('+GKEYS.map(function(k){ return k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+(GLOSS[k].pl?'s?':''); }).join('|')+')(?![A-Za-z0-9_])','g');
+function terms(h,used){
+  used=used||{};
+  return h.replace(GRX,function(m,pre,word){
+    var k=GLOSS[word]?word:word.slice(0,-1), g=GLOSS[k];
+    if(!g||used[k]) return m;
+    used[k]=1;
+    var a=' data-term="'+k+'" aria-describedby="termTip"';
+    return pre+(g.href
+      ?'<a class="term term-link" href="'+g.href+'" target="_blank" rel="noopener"'+a+'>'+word+'</a>'
+      :'<span class="term" role="term" tabindex="0"'+a+'>'+word+'</span>');
+  });
+}
+function tlHTML(T){
+  return '<p class="tl-h">'+esc(T.h)+'</p><ol class="tl" style="grid-template-columns:repeat('+T.items.length+',minmax(0,1fr))">'+T.items.map(function(it){
+    var cls=(it.start?'is-start':'')+(it.gap?' is-gap':'')+(it.none?' is-none':'');
+    return '<li class="'+cls+'">'+(it.gap&&it.gap!==1?'<i class="tl-gap">'+esc(it.gap)+'</i>':'')+'<b>'+esc(it.d)+'</b><span>'+esc(it.t)+'</span></li>';
+  }).join('')+'</ol>'+(T.n?'<p class="tl-n">'+terms(esc(nb(T.n)))+'</p>':'');
+}
+function flHTML(F){
+  function chain(list){ return list.map(function(t,i){ return (i?'<i class="fl-ar" aria-hidden="true"></i>':'')+'<span class="fl-b">'+terms(esc(nb(t)))+'</span>'; }).join(''); }
+  return '<p class="tl-h">'+esc(F.h)+'</p><div class="fl-a">'+chain(F.a)+'</div>'+(F.b&&F.b.length?'<div class="fl-split">'+F.b.map(function(b){
+    return '<div class="fl-r'+(b.leak?' is-leak':'')+'"><span class="fl-c">'+esc(b.lab)+'</span>'+chain(b.steps)+'</div>';
+  }).join('')+'</div>':'')+(F.n?'<p class="tl-n">'+terms(esc(nb(F.n)))+'</p>':'');
+}
+function fillPop(n){
+  var stg=n.id?parseInt(n.id,10):n.stage, P=n.pop||{};
+  var ways=$('popWays'), tl=$('popTl');
+  pop.classList.toggle('is-rich',!!n.pop);
+  pop.style.setProperty('--g1',STAGE_C[stg][0]);
+  hideTip();
+  ways.innerHTML=P.ways?P.ways.map(function(w){ return '<li><b>'+terms(esc(w.h))+'.</b> '+terms(esc(nb(w.t)))+'</li>'; }).join(''):'';
+  ways.hidden=!P.ways;
+  ways.classList.toggle('has-h',!!P.waysH);
+  $('popWaysH').textContent=P.waysH||'';
+  $('popWaysH').hidden=!P.waysH;
+  tl.innerHTML=P.tl?tlHTML(P.tl):'';
+  tl.hidden=!P.tl;
+  var fl=$('popFl');
+  fl.innerHTML=P.fl?flHTML(P.fl):'';
+  fl.hidden=!P.fl;
+  fl.parentNode.insertBefore(fl,P.flFirst?$('popWaysH'):$('popNote'));
+  pop.style.width=P.w?P.w+'px':'';
+  var note=$('popNote'), N=P.note||(n.cnote?{lead:n.cnote.lead.replace(/:\s*$/,''),t:n.cnote.text,ck:n.cnote.ck}:null);
+  note.innerHTML=N?'<b>'+esc(N.lead)+'.</b> '+terms(esc(nb(N.t)))+(N.ck?ckLink(N.ck):''):'';
+  note.hidden=!N;
+  pop.style.setProperty('--c',COLOR[n.st]);
+  $('popNum').textContent=n.id||n.num;
+  $('popChip').className='pop-chip st-'+n.st;
+  $('popChip').innerHTML='<i class="tk"></i>'+esc(LABEL[n.st]);
+  $('popStage').textContent='Stage '+stg+' · '+STAGE[stg]+(n.rel?' · '+n.rel.toLowerCase():'');
+  $('popStage').style.color=STAGE_C[stg][0];
+  $('popName').textContent=n.title||n.name;
+  $('popWhat').innerHTML=terms(esc(nb(P.what||n.what)));
+  $('popOwner').innerHTML=terms(esc(nb(P.owner||n.owner)));
+  $('popWhere').innerHTML=terms(esc(nb(P.where||n.where)));
+  $('popTime').innerHTML=terms(esc(nb(P.time||n.time)));
+  $('popSrc').textContent=nb(P.src||n.src);
+}
+function placePop(n){
+  var pw=pop.offsetWidth, ph=pop.offsetHeight, M=28;
+  var x=n.x+n.w/2+20, y=n.y-n.h/2-10;
+  if(x+pw>1600-M) x=n.x-n.w/2-20-pw;
+  if(x<M){ x=clamp(n.x-pw/2,M,1600-M-pw); y=n.y+n.h/2+18; if(y+ph>900-M) y=n.y-n.h/2-18-ph; }
+  y=clamp(y,M,900-M-ph);
+  pop.style.left=Math.round(x)+'px'; pop.style.top=Math.round(y)+'px';
+}
+function setOn(n){ NODES.forEach(function(m){ m.el.classList.toggle('is-on',m===n); m.el.setAttribute('aria-expanded',String(m===n)); }); }
+function openPop(n){
+  popFor=n; setOn(n); fillPop(n); pop.hidden=false; placePop(n);
+  if(!reduce&&pop.animate) pop.animate([{opacity:0,transform:'translateY(6px) scale(.98)'},{opacity:1,transform:'none'}],{duration:220,easing:'cubic-bezier(.2,.7,.3,1)'});
+}
+function closePop(){ if(!popFor) return; if(tipFor&&pop.contains(tipFor)) hideTip(true); popFor=null; setOn(null); pop.hidden=true; }
+slide.addEventListener('click',function(ev){
+  var b=ev.target.closest?ev.target.closest('.nd'):null;
+  if(!b) return;
+  var n=NM[b.getAttribute('data-k')];
+  if(popFor===n){ closePop(); return; }
+  openPop(n);
+});
+slide.addEventListener('keydown',function(ev){
+  var b=ev.target.closest?ev.target.closest('.nd'):null;
+  if(!b) return;
+  var i=NODES.indexOf(NM[b.getAttribute('data-k')]), j=null;
+  if(ev.key==='ArrowRight'||ev.key==='ArrowDown') j=Math.min(NODES.length-1,i+1);
+  if(ev.key==='ArrowLeft'||ev.key==='ArrowUp') j=Math.max(0,i-1);
+  if(j===null) return;
+  ev.preventDefault(); NODES[j].el.focus();
+});
+$('popX').addEventListener('click',function(){ var n=popFor; closePop(); if(n) n.el.focus(); });
+document.addEventListener('click',function(ev){
+  if(!popFor) return;
+  var t=ev.target;
+  if(pop.contains(t)||tip.contains(t)||(t.closest&&t.closest('.nd'))) return;
+  closePop();
+});
+document.addEventListener('keydown',function(ev){
+  if(ev.key==='Escape'&&popFor&&!tipPinned){ var n=popFor; closePop(); n.el.focus(); }
+});
+
+/* ---------- notes for underlined words: hover to read, click to keep open, select or copy ---------- */
+var tip=document.createElement('div'), tipFor=null, tipPinned=false, tipHideT=0;
+tip.className='term-tip'; tip.id='termTip'; tip.setAttribute('role','tooltip'); tip.hidden=true;
+document.body.appendChild(tip);
+function tipText(k,g){
+  var out=[g.name||k, g.t];
+  if(g.l) g.l.forEach(function(x){ out.push('- '+x); });
+  if(g.p) out.push(g.p);
+  if(g.href) out.push('Link: '+g.href);
+  if(g.src) out.push('Source: '+g.src);
+  return out.join('\n');
+}
+function placeTip(){
+  if(!tipFor) return;
+  if(!document.documentElement.contains(tipFor)){ hideTip(true); return; }
+  var r=tipFor.getBoundingClientRect(), w=tip.offsetWidth, h=tip.offsetHeight, M=8;
+  var x=Math.min(Math.max(r.left+r.width/2-w/2,M),innerWidth-w-M), y=r.top-h-10;
+  if(y<M) y=r.bottom+10;
+  if(y+h>innerHeight-M) y=Math.max(M,innerHeight-h-M);
+  tip.style.left=Math.round(x)+'px'; tip.style.top=Math.round(y)+'px';
+}
+function showTip(el,pin){
+  var k=el.getAttribute('data-term'), g=GLOSS[k]; if(!g) return;
+  clearTimeout(tipHideT);
+  if(tipFor!==el){
+    tipFor=el; tipPinned=false;
+    tip.innerHTML='<button type="button" class="tt-x" aria-label="Close this note">×</button>'
+      +'<div class="tt-body"><b>'+esc(g.name||k)+'</b><p>'+esc(nb(g.t))+'</p>'
+      +(g.l?'<ul class="tt-l">'+g.l.map(function(x){ return '<li>'+esc(nb(x))+'</li>'; }).join('')+'</ul>':'')
+      +(g.p?'<p class="tt-p">'+esc(nb(g.p))+'</p>':'')
+      +(g.src?'<p class="tt-src">Source: '+esc(nb(g.src))+'</p>':'')+'</div>'
+      +'<div class="tt-acts">'
+      +(g.href?'<a class="tt-btn tt-open" href="'+g.href+'" target="_blank" rel="noopener">Open '+esc(g.href.replace(/^https?:\/\//,'').replace(/\/$/,''))+' ↗</a>':'')
+      +'<button type="button" class="tt-btn tt-copy">Copy text</button>'
+      +'<span class="tt-hint">Click the word to keep this open</span></div>';
+  }
+  if(pin) tipPinned=true;
+  tip.classList.toggle('is-pinned',tipPinned);
+  tip.setAttribute('role',tipPinned?'dialog':'tooltip');
+  if(tipPinned) tip.setAttribute('aria-label',(g.name||k)+' note'); else tip.removeAttribute('aria-label');
+  var host=fsEl()||document.body; if(tip.parentNode!==host) host.appendChild(tip);
+  tip.hidden=false;
+  placeTip();
+}
+function hideTip(force){
+  if(!tipFor||(tipPinned&&!force)) return;
+  clearTimeout(tipHideT);
+  tipFor=null; tipPinned=false; tip.hidden=true; tip.classList.remove('is-pinned');
+}
+function copyTip(btn){
+  var k=tipFor&&tipFor.getAttribute('data-term'), g=k&&GLOSS[k]; if(!g) return;
+  function done(msg){ btn.textContent=msg; setTimeout(function(){ btn.textContent='Copy text'; },2000); }
+  function selectIt(){
+    try{ var r=document.createRange(), s=getSelection(); r.selectNodeContents(tip.querySelector('.tt-body')); s.removeAllRanges(); s.addRange(r); }catch(e){}
+    done('Selected, press Ctrl+C');
+  }
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(tipText(k,g)).then(function(){ done('Copied'); },selectIt);
+    else selectIt();
+  }catch(e){ selectIt(); }
+}
+function termOf(t){ return t&&t.closest?t.closest('.term'):null; }
+function laterHide(){ clearTimeout(tipHideT); tipHideT=setTimeout(function(){ hideTip(); },220); }
+document.addEventListener('mouseover',function(ev){
+  var t=termOf(ev.target);
+  if(!t) return;
+  if(t===tipFor) clearTimeout(tipHideT);
+  else if(!tipPinned) showTip(t,false);
+});
+document.addEventListener('mouseout',function(ev){
+  var t=termOf(ev.target), to=ev.relatedTarget;
+  if(!t||t!==tipFor||tipPinned) return;
+  if(termOf(to)===t||(to&&tip.contains(to))||document.activeElement===t) return;
+  laterHide();
+});
+tip.addEventListener('mouseenter',function(){ clearTimeout(tipHideT); });
+tip.addEventListener('mouseleave',function(ev){
+  if(tipPinned||(tipFor&&termOf(ev.relatedTarget)===tipFor)) return;
+  laterHide();
+});
+document.addEventListener('focusin',function(ev){ var t=termOf(ev.target); if(t&&!tipPinned) showTip(t,false); });
+document.addEventListener('focusout',function(ev){
+  if(ev.target===tipFor&&!tipPinned&&!(ev.relatedTarget&&tip.contains(ev.relatedTarget))) hideTip();
+});
+document.addEventListener('click',function(ev){
+  var t=termOf(ev.target);
+  if(t){
+    ev.preventDefault();   /* a linked word opens its note; the link itself is the button inside */
+    if(t===tipFor&&tipPinned) hideTip(true); else showTip(t,true);
+    return;
+  }
+  if(tip.contains(ev.target)){
+    var x=ev.target.closest('.tt-x'), c=ev.target.closest('.tt-copy');
+    if(x){ var f=tipFor; hideTip(true); if(f&&f.focus) f.focus(); }
+    else if(c) copyTip(c);
+    return;
+  }
+  hideTip(true);
+});
+document.addEventListener('keydown',function(ev){
+  if(ev.key==='Escape'&&tipFor){ var f=tipFor, p=tipPinned; hideTip(true); if(p&&f&&f.focus) f.focus(); return; }
+  var t=termOf(ev.target);
+  if(t&&(ev.key==='Enter'||ev.key===' ')){ ev.preventDefault(); if(t===tipFor&&tipPinned) hideTip(true); else showTip(t,true); }
+});
+window.addEventListener('scroll',function(){ if(tipPinned) placeTip(); else hideTip(); },{passive:true,capture:true});
+window.addEventListener('resize',function(){ if(tipPinned) placeTip(); else hideTip(); });
+
+/* ---------- motion: a soft entrance, then light flowing along the journey ---------- */
+function startComet(){
+  if(reduce) return;
+  var d=RUN.map(function(k,i){ var s=EM[k].d; return i?s.replace(/^M/,'L'):s; }).join(' ');
+  var c1=$('comet1'), c2=$('comet2');
+  c1.setAttribute('d',d); c2.setAttribute('d',d);
+  var L=c2.getTotalLength(), D=72, T=Math.round(L/440*1000);
+  [c1,c2].forEach(function(p){
+    p.style.strokeDasharray=D+' '+(L+D);
+    p.style.strokeDashoffset=D+'px';
+    if(p.animate) p.animate([{strokeDashoffset:D+'px'},{strokeDashoffset:(-L)+'px'}],{duration:T,iterations:Infinity,easing:'linear'});
+  });
+}
+function entrance(){
+  if(reduce||!slide.animate){ startComet(); return; }
+  var ease='cubic-bezier(.2,.7,.3,1)';
+  $('slSvg').animate([{opacity:0},{opacity:1}],{duration:900,delay:200,easing:'ease',fill:'backwards'});
+  STAGES.forEach(function(s,i){ s.el.animate([{opacity:0},{opacity:1}],{duration:500,delay:100+i*80,easing:'ease',fill:'backwards'}); });
+  NODES.forEach(function(n,i){
+    n.el.animate([{opacity:0,transform:'translateY(12px)'},{opacity:1,transform:'translateY(0)'}],{duration:560,delay:140+i*42,easing:ease,fill:'backwards'});
+  });
+  EDGES.forEach(function(e){ if(e.chip) e.chip.animate([{opacity:0},{opacity:1}],{duration:400,delay:700,easing:'ease',fill:'backwards'}); });
+  note.animate([{opacity:0},{opacity:1}],{duration:500,delay:900,easing:'ease',fill:'backwards'});
+  setTimeout(startComet,140+NODES.length*42+500);
+}
+
+/* tabs that come next */
+var toast=$('toast'), toastT=null;
+Array.prototype.forEach.call(document.querySelectorAll('.ui-item.is-pending'),function(b){
+  b.addEventListener('click',function(){
+    toast.textContent='This tab comes next. We build one tab at a time.';
+    toast.hidden=false; clearTimeout(toastT);
+    toastT=setTimeout(function(){ toast.hidden=true; },2400);
+  });
+});
+
+/* ---------- one slide per stage, under the full journey ---------- */
+var STG=[
+ {n:1,cards:['n11','n12','d13'],t:'How we pick the IBs',s:'Sales suggests IBs, we pick 1 to 2 per country, and each IB agrees to our terms before we build.',prev:null,next:'n21'},
+ {n:2,part:1,parts:2,cards:['n21','n22'],t:'From the request form to a built bot',s:'The IB sends their brand and logic through the request form. Fetra\'s team builds the bot in about 7 days, then tests it.',prev:'d13',next:'n23'},
+ {n:2,part:2,parts:2,cards:['n23','n24'],t:'From the language check to going live',s:'Local sales checks the wording. Then Fetra\'s team adds the AM as the approver, and the IB shares the bot.',prev:'n22',next:'n31'},
+ {n:3,part:1,parts:2,cards:['n31','n32','n33'],t:'From a free try to asking for Pro',s:'Clients try the bot for free, then open an account and deposit to ask for Pro. Most never deposit, and that\'s where we lose clients.',prev:'n24',next:'d34'},
+ {n:3,part:2,parts:2,cards:['d34','n35'],t:'From the AM\'s check to Pro',s:'The AM checks the balance against the Pro minimum and taps Approve, and the client gets Pro for 30 days.',prev:'n33',next:'n41'},
+ {n:4,cards:['n41'],t:'Keeping Pro each month',s:'Each month the client applies again after a reminder from the bot, and the AM checks the balance still meets the Pro minimum.',prev:'n35',next:'n51'},
+ {n:5,cards:['n51','n52'],t:'Checking the IB each month',s:'The IB keeps their bot while they meet Edwin\'s minimum. Nobody is set to check that yet.',prev:'n41',next:null}
+];
+/* the branches on the flowchart, folded into the step they belong to */
+var BR={
+ d13:{lead:'Won\'t agree?',text:'We don\'t build, and we move to the next IB on the list.'},
+ n31:{lead:'No deposit?',text:'They drop off, and there\'s no set follow-up today. In Indonesia, about 1 to 2% of people who start a bot become clients.',leak:true},
+ d34:{lead:'Below the Pro minimum?',text:'The AM taps Reject, and the client doesn\'t get Pro.'},
+ n41:{lead:'Below the Pro minimum?',text:'The AM taps Reject, and the client\'s Pro ends.'},
+ n52:{lead:'Misses Edwin\'s minimum?',text:'After more than 2 missed months, Finsfree stops maintaining the bot. Fetra has already shut down one Indonesian IB\'s tool for not bringing the agreed FTDs.',leak:true}
+};
+var logoSrc=slide.querySelector('.sl-logo').getAttribute('src');
+function stepName(n){ return (n.id||n.num)+' '+(n.title||n.name); }
+function fmtVal(v){
+  v=String(v);
+  if(/^\s*(not known( yet)?|to confirm.*)\s*$/i.test(v)) return '<span class="tbc">'+esc(v)+'</span>';
+  var m=v.match(/^(.*?)\s*\(([^()]*to confirm[^()]*)\)\s*$/i);
+  if(m) return terms(esc(m[1]))+' <span class="tbc">'+esc(m[2].charAt(0).toUpperCase()+m[2].slice(1))+'</span>';
+  m=v.match(/^No set owner(.*)$/);
+  if(m) return '<span class="nso">No set owner</span>'+terms(esc(m[1]));
+  return terms(esc(v));
+}
+function cardHTML(n,i){
+  var b=BR[n.k]||n.cnote;
+  return '<article class="sc st-'+n.st+'" style="transition-delay:'+(160+i*90)+'ms">'
+    +'<div class="sc-top"><span class="sc-b"><i class="tk"></i>'+esc(n.id||n.num)+'</span><span class="sc-chip"><i class="tk"></i>'+esc(LABEL[n.st])+'</span></div>'
+    +'<h3 class="sc-n">'+esc(n.title||n.name)+'</h3>'
+    +'<p class="sc-w">'+terms(esc(n.what))+'</p>'
+    +(b?'<p class="sc-br'+(b.leak?' is-leak':'')+'"><b>'+esc(b.lead)+'</b> '+terms(esc(b.text))+(b.ck?ckLink(b.ck):'')+'</p>':'')
+    +'<dl class="sc-m"><div><dt>Owner</dt><dd>'+fmtVal(n.owner)+'</dd></div><div><dt>Where</dt><dd>'+fmtVal(n.where)+'</dd></div><div><dt>How long</dt><dd>'+fmtVal(n.time)+'</dd></div></dl>'
+    +'<p class="sc-src">Source: '+esc(b&&b.src?b.src:n.src)+'</p>'
+    +'</article>';
+}
+function ghostHTML(n,side){
+  var g=stageOf(n), c=STAGE_C[g];
+  return '<div class="sc sc-ghost st-'+n.st+'" aria-hidden="true" style="--g1:'+c[0]+';--g2:'+c[1]+';--gl:'+rgba(c[1],.55)+'">'
+    +'<span class="sc-gl">'+(side==='before'?'Before':'Next')+' · '+g+' '+STAGE[g]+'</span>'
+    +'<div class="sc-top"><span class="sc-b"><i class="tk"></i>'+esc(n.id||n.num)+'</span></div>'
+    +'<span class="sc-n">'+esc(n.title||n.name)+'</span>'
+    +'</div>';
+}
+function stageVars(el,n){
+  var c=STAGE_C[n];
+  el.style.setProperty('--g1',c[0]); el.style.setProperty('--g2',c[1]);
+  el.style.setProperty('--gl',rgba(c[1],.55));
+}
+function stageSlide(s){
+  var nodes=s.cards.map(function(k){ return NM[k]; }), counts={};
+  nodes.forEach(function(n){ counts[n.st]=(counts[n.st]||0)+1; });
+  var cnt=['auto','partly','manual','none'].filter(function(k){ return counts[k]; }).map(function(k){
+    return '<span class="lg st-'+k+'" style="--c:'+COLOR[k]+'"><i class="tk"></i>'+LABEL[k]+' <b>'+counts[k]+'</b></span>';
+  }).join('');
+  var prev=s.prev?NM[s.prev]:null, next=s.next?NM[s.next]:null;
+  var foot='<span>'+(prev?'Before: <b>'+esc(stepName(prev))+'</b>':'This is where it starts')
+    +(next?'<i class="st-dot"></i>Next: <b>'+esc(stepName(next))+'</b>':'')+'</span>';
+  var tr='<ol class="st-tr" aria-label="Stages">'+[1,2,3,4,5].map(function(m){
+    var c=STAGE_C[m];
+    return '<li'+(m===s.n?' class="is-cur" aria-current="step"':'')+' style="--g1:'+c[0]+';--g2:'+c[1]+'"><b>'+m+'</b>'+STAGE[m]+'</li>';
+  }).join('')+'</ol>';
+  var eb='Finsfree pilot · <b>Executive summary</b> · Stage '+s.n+' of 5'+(s.part?' · Part '+s.part+' of '+s.parts:'');
+  var w=document.createElement('div'), f=document.createElement('div'), l=document.createElement('div');
+  w.className='sw'; f.className='sf'; l.className='sl sl-st';
+  l.setAttribute('role','group');
+  l.setAttribute('aria-label','Stage '+s.n+', '+STAGE[s.n]+(s.part?', part '+s.part+' of '+s.parts:'')+': '+s.t);
+  stageVars(l,s.n);
+  l.innerHTML='<div class="st">'
+    +'<div class="st-top"><div class="st-eb">'+eb+'</div><img class="st-logo" src="'+logoSrc+'" alt="TMGM" width="132" height="33"></div>'
+    +'<div class="st-head"><span class="rb-w"><span class="rb"><b>'+s.n+'</b>'+STAGE[s.n]+'</span></span><h2 class="st-title">'+esc(s.t)+'</h2></div>'
+    +'<div class="st-sub"><p>'+esc(s.s)+'</p><div class="st-cnt">'+cnt+'</div></div>'
+    +(nodes.length===1&&prev&&next
+      ?'<div class="st-grid c1 has-ghost">'+ghostHTML(prev,'before')+cardHTML(nodes[0],0)+ghostHTML(next,'after')+'</div>'
+      :'<div class="st-grid c'+nodes.length+'">'+nodes.map(cardHTML).join('')+'</div>')
+    +'<div class="st-foot">'+foot+tr+'</div>'
+    +'</div>';
+  f.appendChild(l); w.appendChild(f);
+  return w;
+}
+var jn=$('jn'), fsn=$('fsn'), GROUP=[0], JUMP=[{label:'Full journey',el:wrap,first:0}];
+STG.forEach(function(s){
+  if(!s.part||s.part===1){
+    var steps=NODES.filter(function(n){ return n.id&&parseInt(n.id,10)===s.n; }).length;
+    var dv=document.createElement('div');
+    dv.className='dv'; stageVars(dv,s.n);
+    dv.innerHTML='<span class="dv-r"><b>'+s.n+'</b>'+STAGE[s.n]+'</span><span class="dv-t">Stage '+s.n+' of 5 · '+steps+' step'+(steps>1?'s':'')+(s.parts?' · '+s.parts+' slides':'')+'</span><i class="dv-l" aria-hidden="true"></i>';
+    deck.insertBefore(dv,fsn);
+    JUMP.push({label:s.n+' '+STAGE[s.n],el:dv,first:WRAPS.length,n:s.n});
+  }
+  var w=stageSlide(s);
+  deck.insertBefore(w,fsn);
+  WRAPS.push(w); FRAMES.push(w.firstChild); SLIDES.push(w.firstChild.firstChild);
+  GROUP.push(JUMP.length-1);
+});
+
+/* jump to a slide, and show which one is on screen */
+jn.innerHTML=JUMP.map(function(j,i){
+  var c=j.n?STAGE_C[j.n]:null;
+  return '<button type="button" data-j="'+i+'"'+(c?' style="--g2:'+c[1]+'"':'')+'><i></i>'+esc(j.label)+'</button>';
+}).join('');
+var JB=Array.prototype.slice.call(jn.querySelectorAll('button'));
+function barOffset(){ return bar.getBoundingClientRect().height+10; }
+function scrollToEl(el,smooth){
+  var y=el===wrap?0:el.getBoundingClientRect().top+window.pageYOffset-barOffset();
+  try{ window.scrollTo({top:Math.max(0,y),behavior:(smooth&&!reduce)?'smooth':'auto'}); }catch(e){ window.scrollTo(0,Math.max(0,y)); }
+}
+jn.addEventListener('click',function(ev){
+  var b=ev.target.closest?ev.target.closest('button'):null;
+  if(!b) return;
+  scrollToEl(JUMP[+b.getAttribute('data-j')].el,true);
+});
+function mostVisible(){
+  var best=0, bv=-1, top=barOffset();
+  WRAPS.forEach(function(w,i){
+    var r=w.getBoundingClientRect(), v=Math.min(r.bottom,window.innerHeight)-Math.max(r.top,top);
+    if(v>bv){ bv=v; best=i; }
+  });
+  return best;
+}
+var onJ=-1, jT=0;
+function markJump(){
+  jT=0;
+  var g=GROUP[mostVisible()];
+  if(g===onJ) return;
+  onJ=g;
+  JB.forEach(function(b,i){ b.classList.toggle('is-on',i===g); if(i===g) b.setAttribute('aria-current','true'); else b.removeAttribute('aria-current'); });
+  var on=JB[g];
+  if(on&&jn.scrollWidth>jn.clientWidth){
+    if(on.offsetLeft<jn.scrollLeft) jn.scrollLeft=on.offsetLeft-8;
+    else if(on.offsetLeft+on.offsetWidth>jn.scrollLeft+jn.clientWidth) jn.scrollLeft=on.offsetLeft+on.offsetWidth-jn.clientWidth+8;
+  }
+}
+window.addEventListener('scroll',function(){ if(!jT) jT=requestAnimationFrame(markJump); },{passive:true});
+window.addEventListener('resize',function(){ if(!jT) jT=requestAnimationFrame(markJump); });
+
+/* full screen: the whole deck, one slide at a time */
+var cur=0, wasFs=false, wakeT=null, fsPos=$('fsPos'), fsPrev=$('fsPrev'), fsNext=$('fsNext');
+function slideName(i){ if(!i) return 'Full journey'; var s=STG[i-1]; return s.n+' '+STAGE[s.n]+(s.part?', part '+s.part:''); }
+function wake(){
+  deck.classList.add('fs-wake'); clearTimeout(wakeT);
+  wakeT=setTimeout(function(){ deck.classList.remove('fs-wake'); },2200);
+}
+function go(i,anim){
+  i=clamp(i,0,WRAPS.length-1);
+  if(popFor) closePop();
+  WRAPS.forEach(function(w,j){ w.classList.toggle('is-cur',j===i); });
+  cur=i;
+  fsPos.textContent=(i+1)+' / '+WRAPS.length+' · '+slideName(i);
+  fsPrev.disabled=i===0; fsNext.disabled=i===WRAPS.length-1;
+  fit();
+  if(anim&&!reduce&&FRAMES[i].animate) FRAMES[i].animate([{opacity:0},{opacity:1}],{duration:320,easing:'ease'});
+  wake();
+}
+fsBtn.addEventListener('click',function(){
+  cur=mostVisible();
+  try{
+    var p=deck.requestFullscreen?deck.requestFullscreen():deck.webkitRequestFullscreen();
+    if(p&&p.catch) p.catch(function(){});
+  }catch(e){}
+});
+function onFs(){
+  var on=fsEl()===deck;
+  deck.classList.toggle('is-fs',on);
+  if(on){ go(cur,false); }
+  else if(wasFs){
+    WRAPS.forEach(function(w){ w.classList.remove('is-cur'); });
+    fit(); scrollToEl(WRAPS[cur],false);
+  }
+  wasFs=on;
+  fit();
+  if(popFor) placePop(popFor);
+}
+document.addEventListener('fullscreenchange',onFs);
+document.addEventListener('webkitfullscreenchange',onFs);
+fsPrev.addEventListener('click',function(){ go(cur-1,true); });
+fsNext.addEventListener('click',function(){ go(cur+1,true); });
+deck.addEventListener('mousemove',function(){ if(wasFs) wake(); });
+document.addEventListener('keydown',function(ev){
+  if(fsEl()!==deck) return;
+  var k=ev.key, t=null;
+  if(k==='ArrowRight'||k==='ArrowDown'||k==='PageDown'||k===' '||k==='Spacebar') t=cur+1;
+  else if(k==='ArrowLeft'||k==='ArrowUp'||k==='PageUp') t=cur-1;
+  else if(k==='Home') t=0;
+  else if(k==='End') t=WRAPS.length-1;
+  if(t===null) return;
+  ev.preventDefault(); ev.stopPropagation();
+  if(t!==cur&&t>=0&&t<WRAPS.length) go(t,true);
+},true);
+
+/* stage cards rise in the first time their slide comes into view (they stay visible until then) */
+if(!reduce&&'IntersectionObserver' in window&&document.body.animate){
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(!e.isIntersecting) return;
+      io.unobserve(e.target);
+      Array.prototype.forEach.call(e.target.querySelectorAll('.sc'),function(c,i){
+        c.animate([{opacity:0,transform:'translateY(16px)'},{opacity:1,transform:'none'}],{duration:600,delay:160+i*90,easing:'cubic-bezier(.2,.7,.3,1)',fill:'backwards'});
+      });
+    });
+  },{threshold:.2});
+  WRAPS.slice(1).forEach(function(w){ io.observe(w); });
+}
+/* ---------- Aaron's checklist: what Aaron needs to confirm, in flowchart order, each with our suggestion ----------
+   To record an answer, set ans on the item, for example ans:{pick:'A',on:'13 Nov',note:'Korea can go higher later.'} */
+var CK_DATE='12 Nov 2026';
+var CHECK=[
+ {n:1,stage:5,tab:'p03',steps:['d13','n51','n52'],
+  short:'The bar to keep a bot',
+  glance:'Edwin\'s minimum in all 3 markets, for now',
+  q:'What bar should a pilot IB meet to keep their bot?',
+  why:'Each IB agrees to this bar before we build (step 1.3), and it decides when Finsfree stops maintaining their bot.',
+  opts:[
+   {k:'A',h:'Edwin\'s minimum in all 3 markets',t:'30 FTDs and USD 1,500 in first deposits in the first 2 months, then at least 10 FTDs a month. We look at higher bars once we have results.'},
+   {k:'B',h:'Higher for Korea',t:'Edwin\'s minimum for Malaysia and Vietnam, and a higher bar for Korea that Aaron sets before Korea\'s IBs are picked.'},
+   {k:'C',h:'A bar for each IB',t:'Each AM agrees one with their IB, never below Edwin\'s minimum.'}
+  ],
+  pick:'A',
+  rsn:'Edwin kept his minimum low on purpose while we test, so we don\'t put IBs off, and Aaron saw a bar per market as a step for after the testing. Korea\'s IBs aren\'t picked yet, so B can still come before they are.',
+  facts:[
+   {t:'Edwin\'s minimum is TMGM\'s floor in every market, and sales can ask an IB for more. He kept it low so we don\'t put IBs off while we test.',s:'Edwin, 3 Nov'},
+   {t:'Aaron expects more deposits from Korean IBs, and suggested an SOP per market for when we keep or stop a bot.',s:'Aaron, 3 Nov'},
+   {t:'Miss the minimum for more than 2 months, and Finsfree stops maintaining the bot. Fetra was stopping one Indonesian bot the next day for not bringing numbers.',s:'Edwin, 3 Nov; Fetra\'s walkthrough, 3 Nov'}
+  ],
+  next:'The AM explains the bar to each IB at step 1.3, before we build.',
+  ans:null},
+ {n:2,stage:3,tab:'p05',steps:['d13','d34','n41'],
+  short:'The Pro minimum, and how fast the AM approves',
+  glance:'USD 500, approved within 1 working day',
+  q:'What Pro minimum should clients keep, and how fast should the AM approve?',
+  why:'The Pro minimum is the balance a client keeps in their TMGM account to get Pro, and to keep it each month. It isn\'t set in the bot, so each IB needs an amount before they agree to our terms.',
+  opts:[
+   {k:'A',h:'USD 500 for every pilot IB',t:'As Aaron suggested on 3 Nov. An AM can agree a higher amount with their IB.'},
+   {k:'B',h:'Each AM sets it with their IB',t:'No starting amount, so it can differ between IBs in the same market.'},
+   {k:'C',h:'USD 50, like Indonesia',t:'The easiest for clients to reach, but Aaron felt it was too low.'}
+  ],
+  plus:{h:'How fast',t:'The AM approves within 1 working day of the client\'s request.'},
+  pick:'A',
+  rsn:'It\'s Aaron\'s own number, and one amount lets us compare the pilot IBs fairly. The trade-off: fewer clients may reach USD 500, and each IB still needs 30 FTDs in its first 2 months. For the timing, 1 working day is close to the 24 hours a Thai IB asked for, and markets are closed at weekends, so a client who asks then loses little by waiting for Monday.',
+  facts:[
+   {t:'Indonesia\'s bots use USD 50. First deposits there average about USD 93: about 200 clients and about USD 18,700 in total.',s:'Fetra\'s sheet, shown on 3 Nov'},
+   {t:'Aaron saw good FTD numbers in Indonesia but low deposits, probably because of the USD 50 minimum, and suggested about USD 500.',s:'Aaron, 3 Nov'},
+   {t:'The amount isn\'t set in the bot, so each IB can agree its own with its AM.',s:'Fetra, 11 Nov'},
+   {t:'To keep Pro after a month, the account must still hold the amount agreed with the IB.',s:'Aaron, 10 Nov'},
+   {t:'A Thai IB\'s request, under review, asks sales to activate within 24 hours.',s:'Fetra\'s walkthrough, 3 Nov'}
+  ],
+  next:'The AM tells each IB the amount at step 1.3, and it goes in their request form.',
+  ans:null},
+ {n:3,stage:3,tab:'p05',steps:['n21','n32','d34'],
+  short:'Which clients can get Pro',
+  glance:'New clients, plus the IB\'s own',
+  q:'Which clients can get Pro: only new ones, or existing TMGM clients too?',
+  why:'The request form asks every IB "Do existing TMGM clients qualify?", so each AM needs one answer before their IB fills it in.',
+  opts:[
+   {k:'A',h:'New clients only',t:'People who open their first TMGM account through the IB link.'},
+   {k:'B',h:'New clients, plus the IB\'s own',t:'Clients already under the pilot IB qualify too, once they meet the Pro minimum. Nobody changes IB.'},
+   {k:'C',h:'Clients from anywhere at TMGM',t:'Clients of other IBs, or with no IB, can move under the pilot IB, or sign up again through its link as in Indonesia.'}
+  ],
+  pick:'B',
+  rsn:'It\'s the check the AM already makes at step 3.4: the client is under this IB and meets the Pro minimum. No client moves between IBs, so other IBs and their AMs aren\'t affected, and the pilot\'s FTDs stay new clients.',
+  facts:[
+   {t:'In Indonesia, clients already under another IB sign up again through the new IB\'s link.',s:'Fetra, 8 Oct'},
+   {t:'Because of that, Fetra\'s own count runs higher than Salesforce, 178 against 173: some clients signed up under more than one IB.',s:'Fetra, 8 Oct'},
+   {t:'A Thai IB\'s request, under review, lets existing TMGM clients qualify only if they move under that IB.',s:'Fetra\'s walkthrough, 3 Nov'},
+   {t:'Two of the Vietnam IBs place their clients with other brokers today, so most of their clients would be new to TMGM anyway.',s:'Vietnam IB list, 10 Nov'}
+  ],
+  next:'Each AM picks the matching answer in their IB\'s request form.',
+  ans:null},
+ {n:4,stage:3,tab:'p05',steps:['n24','d34','n41'],
+  short:'Who can approve Pro',
+  glance:'Only the AM',
+  q:'Should only the AM have the Approve button?',
+  why:'Whoever Fetra adds as an approver gets every Pro request as a Telegram alert with Approve and Reject buttons. So who we add decides who has the final say.',
+  opts:[
+   {k:'A',h:'Only the AM',t:'Fetra adds only the AM\'s Telegram ID, so only the AM can approve. The IB still looks after their community.'},
+   {k:'B',h:'The AM and the IB',t:'Both can approve, as in Indonesia, where the IB\'s admin approves. Clients may get Pro faster, but the IB could approve a client the AM wouldn\'t.'}
+  ],
+  pick:'A',
+  rsn:'It keeps what Aaron agreed on 10 Nov: the AM gives the final OK, for now, and we see how it goes.',
+  facts:[
+   {t:'Final approval sits with the IB\'s AM, for now, and we see how it goes.',s:'Aaron, 10 Nov'},
+   {t:'Approvers are added by Telegram ID. The IB can be added too, and then gets the same Approve button.',s:'Fetra, 11 Nov'},
+   {t:'In Indonesia, the IB\'s own admin approves Pro, after checking the client in the IB portal.',s:'Fetra\'s walkthrough, 3 Nov'}
+  ],
+  next:'Each AM sends Fetra their Telegram ID before go-live.',
+  ans:null},
+ {n:5,stage:5,tab:'p06',steps:['n51','n52'],
+  short:'Who checks each IB every month',
+  glance:'Each AM, using Fetra\'s monthly report',
+  q:'Who checks each pilot IB\'s numbers every month?',
+  why:'Edwin\'s minimum is counted every month. For the new markets, nobody is set to check it yet.',
+  opts:[
+   {k:'A',h:'Each AM, for their own IB',t:'Fetra sends his tracking report at the start of each month, and each AM checks their own IB against Edwin\'s minimum.'},
+   {k:'B',h:'Fetra, for all pilot IBs',t:'Fetra checks every IB from his report, as he does for Indonesia today, and tells the AM when one falls short.'}
+  ],
+  pick:'A',
+  rsn:'The AM looks after the IB, so they can talk to them early when the numbers fall short. Fetra is already making this report for sales to track their IBs, so nobody needs to pull numbers separately.',
+  facts:[
+   {t:'Edwin\'s minimum: 30 FTDs and USD 1,500 in the first 2 months, then at least 10 FTDs a month. Miss it for more than 2 months, and Finsfree stops maintaining the bot.',s:'Edwin, 3 Nov'},
+   {t:'Fetra will make the same tracking report for the new markets, for sales to track the numbers with each IB. He takes the exact numbers from Salesforce.',s:'Fetra\'s walkthrough, 3 Nov'},
+   {t:'Fetra tracks Indonesia\'s numbers himself today.',s:'Fetra\'s walkthrough, 3 Nov'}
+  ],
+  next:'Each AM gets Fetra\'s report at the start of each month and talks to any IB that falls short.',
+  ans:null}
+];
+function ckOpt(it,k){ for(var i=0;i<it.opts.length;i++) if(it.opts[i].k===k) return it.opts[i]; return {k:k,h:''}; }
+function ckOpenN(){ var c=0; CHECK.forEach(function(it){ if(!it.ans) c++; }); return c; }
+function ckAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
+function ckVars(st){ var c=STAGE_C[st]; return '--g1:'+c[0]+';--g2:'+c[1]+';--gl:'+rgba(c[1],.5); }
+/* a link from a flowchart note to its item (used by the step cards and the stage slides) */
+function ckLink(ck){
+  var a=[].concat(ck), lab=a.length>1?'items '+a.slice(0,-1).join(', ')+' and '+a[a.length-1]:'item '+a[0];
+  return ' <a class="ck-link" href="#checklist" data-ck="'+a[0]+'">See '+lab+' in Aaron\'s checklist</a>';
+}
+function ckStatus(it){
+  return it.ans?'<span class="ck-st is-done"><i aria-hidden="true"></i><span class="ck-stt">Confirmed</span></span>':'<span class="ck-st"><i aria-hidden="true"></i><span class="ck-stt">To confirm</span></span>';
+}
+function ckStepBtn(k){
+  var n=NM[k], c=STAGE_C[stageOf(n)], num=n.id||n.num;
+  return '<button type="button" class="ck-step" data-step="'+k+'" style="--g1:'+c[0]+'" aria-label="'+ckAttr('Open step '+num+', '+(n.title||n.name)+', on the flowchart')+'"><b>'+esc(num)+'</b>'+esc(n.name)+'</button>';
+}
+var CK_CLOCK='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 4.6V8l2.4 1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function ckCard(it){
+  var used={};
+  function T(s){ return terms(esc(nb(s)),used); }
+  /* built in reading order, so each word is underlined where it first appears */
+  var why=T(it.why);
+  var opts=it.opts.map(function(o){
+    var me=o.k===it.pick, his=!!(it.ans&&it.ans.pick===o.k);
+    return '<li class="ck-opt'+(me?' is-pick':'')+(his?' is-his':'')+'"><span class="ck-l"><span class="ck-sr">Option </span>'+o.k+'</span><div class="ck-ob"><div class="ck-oh"><b>'+esc(o.h)+'</b>'
+      +(me?'<span class="ck-tag">Our suggestion</span>':'')+(his?'<span class="ck-tag is-his">Aaron\'s pick</span>':'')
+      +'</div><p>'+T(o.t)+'</p></div></li>';
+  }).join('');
+  var plus=it.plus?'<div class="ck-plus"><span class="ck-l">'+CK_CLOCK+'</span><div class="ck-ob"><div class="ck-oh"><b>'+esc(it.plus.h)+'</b><span class="ck-tag">Our suggestion</span></div><p>'+T(it.plus.t)+'</p></div></div>':'';
+  var rsn=T(it.rsn);
+  var facts=it.facts.map(function(f){ return '<li>'+T(f.t)+'<span class="ck-src">'+esc(nb(f.s))+'</span></li>'; }).join('');
+  var next=T(it.next);
+  var ans=it.ans
+    ?'<div class="ck-ans is-done"><b>Aaron\'s answer'+(it.ans.on?' · '+esc(nb(it.ans.on)):'')+'</b>'+esc(it.ans.pick)+'. '+esc(ckOpt(it,it.ans.pick).h)+(it.ans.note?'. '+T(it.ans.note):'')+'</div>'
+    :'<div class="ck-ans"><b>Aaron\'s answer</b>Waiting for Aaron</div>';
+  return '<article class="ck-card" id="ck-'+it.n+'" style="'+ckVars(it.stage)+'" aria-labelledby="ckq-'+it.n+'">'
+    +'<div class="ck-main">'
+    +'<div class="ck-top"><span class="ck-num" aria-hidden="true">'+it.n+'</span>'+ckStatus(it)+'</div>'
+    +'<h3 class="ck-q" id="ckq-'+it.n+'"><span class="ck-sr">'+it.n+'. </span>'+esc(it.q)+'</h3>'
+    +'<div class="ck-steps"><span>On the flowchart</span>'+it.steps.map(ckStepBtn).join('')+'</div>'
+    +'<p class="ck-why">'+why+'</p>'
+    +'<p class="ck-lh">The options</p><ul class="ck-opts">'+opts+'</ul>'+plus
+    +'<p class="ck-rsn"><b>Why we suggest '+it.pick+'.</b> '+rsn+'</p>'
+    +'</div>'
+    +'<div class="ck-side">'
+    +'<p class="ck-lh">What we know</p><ul class="ck-facts">'+facts+'</ul>'
+    +'<p class="ck-lh">After a yes</p><p class="ck-next">'+next+'</p>'
+    +ans
+    +'</div>'
+    +'</article>';
+}
+function ckGlance(){
+  return CHECK.map(function(it){
+    var s=it.ans?(it.ans.pick+'. '+ckOpt(it,it.ans.pick).h):it.glance;
+    return '<li><button type="button" class="ck-g" data-ck="'+it.n+'" style="'+ckVars(it.stage)+'"><span class="ck-gn" aria-hidden="true">'+it.n+'</span>'
+      +'<span class="ck-gq"><span class="ck-sr">'+it.n+'. </span>'+esc(it.short)+'</span>'
+      +'<span class="ck-gs"><em>'+(it.ans?'Aaron chose':'We suggest')+'</em>'+esc(s)+'</span>'+ckStatus(it)+'</button></li>';
+  }).join('');
+}
+function ckCounts(){
+  var open=ckOpenN(), done=CHECK.length-open;
+  $('ckProgN').textContent=done+' / '+CHECK.length;
+  $('ckProgBar').style.width=Math.round(done/CHECK.length*100)+'%';
+  $('ckProg').setAttribute('aria-label','Aaron to confirm: '+done+' of '+CHECK.length+' confirmed. Open Aaron\'s checklist.');
+  var chip=$('ckChip'); chip.textContent=open?String(open):'Done'; chip.className='ui-chip '+(open?'is-red':'is-done');
+  ['p03','p05','p06'].forEach(function(t){
+    var c=document.querySelector('#tab-'+t+' .ui-chip'), n=0;
+    if(!c) return;
+    CHECK.forEach(function(it){ if(it.tab===t&&!it.ans) n++; });
+    c.textContent=n?String(n):'Facts'; c.className='ui-chip '+(n?'is-red':'is-muted');
+  });
+}
+function ckRender(){
+  var open=ckOpenN(), done=CHECK.length-open;
+  $('ckSheet').innerHTML=
+    '<div class="ck-head"><div class="ck-eb">Finsfree pilot · <b>Aaron\'s checklist</b> · Updated '+esc(nb(CK_DATE))+'</div><img class="ck-logo" src="'+logoSrc+'" alt="TMGM" width="132" height="33"></div>'
+    +'<h1 class="ck-title">'+(open?CHECK.length+' things for Aaron to confirm':'All '+CHECK.length+' confirmed by Aaron')+'</h1>'
+    +'<p class="ck-sub">In the order they come up on the flowchart. Each one shows our suggestion, so a quick yes, or a change, is enough.</p>'
+    +'<div class="ck-gw"><div class="ck-gh"><p class="ck-lh">At a glance</p><span class="ck-pg"><span><b>'+done+' of '+CHECK.length+'</b> confirmed</span><span class="ck-pg-bar" aria-hidden="true"><i style="width:'+Math.round(done/CHECK.length*100)+'%"></i></span></span></div>'
+    +'<ul class="ck-glance">'+ckGlance()+'</ul></div>'
+    +'<div class="ck-cards">'+CHECK.map(ckCard).join('')+'</div>'
+    +'<div class="ck-foot"><span><b>Click a step</b> to see it on the flowchart. <b>Click any underlined word</b> to read and copy its note.</span><span>Sources: Aaron, Edwin and Fetra, 8 Oct to 11 Nov 2026</span></div>';
+  ckCounts();
+}
+/* plain text of the whole checklist, to paste into Teams or an email */
+function ckText(){
+  var L=['Finsfree pilot: '+CHECK.length+' things for Aaron to confirm (updated '+CK_DATE+')','Each one shows our suggestion, so a quick yes, or a change, is enough.',''];
+  CHECK.forEach(function(it){
+    L.push(it.n+') '+it.q);
+    L.push('On the flowchart: '+it.steps.map(function(k){ var n=NM[k]; return (n.id||n.num)+' '+n.name; }).join(', '));
+    it.opts.forEach(function(o){ L.push(o.k+'. '+o.h+': '+o.t+(o.k===it.pick?' (our suggestion)':'')); });
+    if(it.plus) L.push(it.plus.h+': '+it.plus.t+' (our suggestion)');
+    L.push('Why we suggest '+it.pick+': '+it.rsn);
+    L.push(it.ans?'Aaron\'s answer: '+it.ans.pick+'. '+ckOpt(it,it.ans.pick).h+(it.ans.on?' ('+it.ans.on+')':'')+(it.ans.note?'. '+it.ans.note:''):'Aaron\'s answer: waiting');
+    L.push('');
+  });
+  return L.join('\n').replace(/\s+$/,'');
+}
+function ckToast(msg){ toast.textContent=msg; toast.hidden=false; clearTimeout(toastT); toastT=setTimeout(function(){ toast.hidden=true; },2600); }
+function ckCopy(btn){
+  var lab=btn.querySelector('span'), txt=ckText();
+  function done(){ lab.textContent='Copied'; setTimeout(function(){ lab.textContent='Copy as text'; },2000); }
+  function fallback(){
+    var ta=document.createElement('textarea'), ok=false;
+    ta.value=txt; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.left='-9999px'; ta.style.top='0';
+    document.body.appendChild(ta); ta.select();
+    try{ ok=document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    if(ok) done(); else ckToast('Copying isn\'t allowed here. Select the text on the page instead.');
+  }
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done,fallback);
+    else fallback();
+  }catch(e){ fallback(); }
+}
+
+/* two views in one page: the flowchart and the checklist */
+var ckPanel=$('panel-checklist'), sumPanel=$('panel-summary'), tabSum=$('tab-summary'), tabCk=$('tab-checklist'), view='summary';
+function ckTab(b,on){ b.classList.toggle('is-active',on); if(on) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); }
+function showView(v){
+  v=v==='checklist'?'checklist':'summary';
+  if(v===view) return false;
+  if(fsEl()===deck){ try{ var x=document.exitFullscreen||document.webkitExitFullscreen; if(x) x.call(document); }catch(e){} }
+  if(popFor) closePop();
+  hideTip(true);
+  if(pinned){ pinned=0; hl(0); }
+  view=v;
+  sumPanel.hidden=v!=='summary'; ckPanel.hidden=v!=='checklist';
+  ckTab(tabSum,v==='summary'); ckTab(tabCk,v==='checklist');
+  if(v==='summary'){ fit(); onJ=-1; markJump(); }
+  return true;
+}
+function goView(v){ if(showView(v)) window.scrollTo(0,0); }
+function ckScrollTo(n,smooth){
+  var el=$('ck-'+n); if(!el) return;
+  var y=el.getBoundingClientRect().top+window.pageYOffset-($('ckSb').getBoundingClientRect().height+14);
+  try{ window.scrollTo({top:Math.max(0,y),behavior:(smooth&&!reduce)?'smooth':'auto'}); }catch(e){ window.scrollTo(0,Math.max(0,y)); }
+  el.setAttribute('tabindex','-1');
+  try{ el.focus({preventScroll:true}); }catch(e){}
+  if(!reduce){ el.classList.remove('is-flash'); void el.offsetWidth; el.classList.add('is-flash'); setTimeout(function(){ el.classList.remove('is-flash'); },1700); }
+}
+function ckOpenStep(k){
+  var n=NM[k]; if(!n) return;
+  showView('summary');
+  scrollToEl(wrap,false);
+  fit();
+  openPop(n);
+  try{ n.el.focus({preventScroll:true}); }catch(e){}
+}
+tabSum.addEventListener('click',function(){ goView('summary'); });
+tabCk.addEventListener('click',function(){ goView('checklist'); });
+$('ckProg').addEventListener('click',function(){ goView('checklist'); });
+$('ckRailShow').addEventListener('click',function(){ setCollapsed(false,true); hideBtn.focus(); });
+$('ckCopy').addEventListener('click',function(){ ckCopy(this); });
+document.addEventListener('click',function(ev){
+  var t=ev.target; if(!t||!t.closest) return;
+  var a=t.closest('.ck-link');
+  if(a){ ev.preventDefault(); var n=+a.getAttribute('data-ck'); showView('checklist'); ckScrollTo(n,false); return; }
+  var g=t.closest('.ck-g');
+  if(g){ ckScrollTo(+g.getAttribute('data-ck'),true); return; }
+  var s=t.closest('.ck-step');
+  if(s) ckOpenStep(s.getAttribute('data-step'));
+});
+function ckFromHash(){
+  var h=String(location.hash||'').toLowerCase();
+  if(h==='#checklist') goView('checklist'); else if(h==='#summary') goView('summary');
+}
+window.addEventListener('hashchange',ckFromHash);
+ckRender();
+ckFromHash();
+
+fit();
+markJump();
+entrance();
+})();
+</script>
+</body>
+</html>
