@@ -455,7 +455,7 @@ b .term{font-weight:inherit}
 .fsn button svg{width:14px;height:14px}
 .fsn span{min-width:170px;padding:0 6px;text-align:center;font-size:12.5px;font-weight:700;letter-spacing:.04em;color:#C9D4EE;white-space:nowrap}
 
-/* ---- Aaron's checklist: the slides' dark look, laid out to read on any screen rather than to present ---- */
+/* ---- Aaron's checklist: the slides' dark look, laid out as quick multiple-choice questions ---- */
 .ui-prog{display:block;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer;transition:background-color .15s ease,border-color .15s ease}
 .ui-prog:hover{background:#0E1A33;border-color:#2C3D57}
 .ui-prog:focus-visible{outline:2px solid var(--blue-hi);outline-offset:2px}
@@ -471,7 +471,7 @@ b .term{font-weight:inherit}
     radial-gradient(640px 420px at 58% 40%,rgba(40,80,200,.08),transparent 70%),
     linear-gradient(165deg,#081437 0%,#060E2A 48%,#040917 100%);
   box-shadow:0 22px 60px var(--frame-sh1),0 2px 10px var(--frame-sh2)}
-.ck-sheet::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1.3px);background-size:26px 26px;-webkit-mask-image:linear-gradient(180deg,#000 0,transparent 640px);mask-image:linear-gradient(180deg,#000 0,transparent 640px)}
+.ck-sheet::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1.3px);background-size:26px 26px;-webkit-mask-image:linear-gradient(180deg,#000 0,transparent 560px);mask-image:linear-gradient(180deg,#000 0,transparent 560px)}
 .ck-sheet::after{content:"";position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(140,180,255,.5),transparent)}
 .ck-sheet>*{position:relative;z-index:1}
 .ck-head{display:flex;align-items:center;justify-content:space-between;gap:24px}
@@ -480,29 +480,12 @@ b .term{font-weight:inherit}
 .ck-logo{display:block;flex:0 0 auto;width:132px;height:33px;opacity:.96}
 .ck-title{margin:14px 0 0;font-size:38px;line-height:1.15;font-weight:700;letter-spacing:-.015em;color:var(--s-ink);text-wrap:balance}
 .ck-sub{margin:10px 0 0;max-width:62em;font-size:17px;line-height:1.55;color:#A3B3D6}
+.ck-sub b{color:#F3F6FF;font-weight:700}
 .ck-lh{margin:0;font-size:11.5px;font-weight:700;letter-spacing:.14em;line-height:1.4;text-transform:uppercase;color:#7083AE}
-/* at a glance */
-.ck-gw{margin:28px 0 0;padding:16px 16px 8px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.1)}
-.ck-gh{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px;padding:0 6px 8px}
-.ck-pg{display:inline-flex;align-items:center;gap:10px;font-size:13px;color:#AFC0E2;font-variant-numeric:tabular-nums}
+.ck-pg{display:inline-flex;align-items:center;gap:10px;margin:18px 0 0;font-size:13px;color:#AFC0E2;font-variant-numeric:tabular-nums}
 .ck-pg b{color:var(--s-ink);font-weight:800}
 .ck-pg-bar{display:block;width:140px;height:5px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
 .ck-pg-bar i{display:block;height:100%;border-radius:5px;background:#86EFAC}
-.ck-glance{list-style:none;margin:0;padding:0}
-.ck-glance li+li{border-top:1px solid rgba(255,255,255,.07)}
-.ck-g{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:4px 14px;width:100%;margin:0;padding:11px 6px;border:0;border-radius:10px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color .15s ease}
-.ck-g:hover{background:rgba(255,255,255,.05)}
-.ck-g:focus-visible{outline:2px solid #8FB8FF;outline-offset:1px}
-.ck-gn{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));color:#0A1230;font-size:13px;font-weight:800;line-height:1}
-.ck-gq{font-size:15.5px;font-weight:700;line-height:1.35;color:var(--s-ink)}
-.ck-gs{grid-column:2 / 4;grid-row:2;font-size:14.5px;line-height:1.45;color:#C9D4EE}
-.ck-gs em{font-style:normal;margin-right:8px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8FB8FF}
-.ck-g .ck-st{grid-column:3;grid-row:1}
-@container (min-width:860px){
-  .ck-g{grid-template-columns:28px minmax(0,.95fr) minmax(0,1.05fr) auto;gap:16px}
-  .ck-gs{grid-column:3;grid-row:1}
-  .ck-g .ck-st{grid-column:4}
-}
 /* status: dashed amber ring while it's open, green tick once Aaron answers */
 .ck-st{display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;padding:4px 11px 4px 6px;border-radius:999px;background:rgba(251,191,36,.1);color:#FCD34D;font-size:12px;font-weight:700;letter-spacing:.04em;line-height:1;white-space:nowrap}
 .ck-st i{flex:0 0 auto;width:13px;height:13px;border-radius:50%;border:1.6px dashed #FBBF24}
@@ -510,57 +493,98 @@ b .term{font-weight:inherit}
 .ck-st.is-done i{border:0;border-radius:0;background:#86EFAC;
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.5 8.6l3.6 3.4 7.4-8' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.5 8.6l3.6 3.4 7.4-8' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
-/* one card per decision */
-.ck-cards{display:grid;gap:22px;margin:26px 0 0}
-.ck-card{position:relative;display:grid;grid-template-columns:minmax(0,1fr);border-radius:18px;color:var(--s-text);scroll-margin-top:72px;
+/* one card per question: the question on top, our suggestion on the left, the options to pick on the right */
+.ck-cards{display:grid;gap:20px;margin:28px 0 0}
+.ck-card{position:relative;padding:22px 24px 24px;border-radius:18px;color:var(--s-text);scroll-margin-top:72px;
   background:radial-gradient(260px 120px at 0% 0%,rgba(255,255,255,.06),transparent 70%),linear-gradient(180deg,#17234B,#0E1838);
   border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 40px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.07)}
 .ck-card::after{content:"";position:absolute;left:22px;right:22px;top:-1px;height:3px;border-radius:0 0 3px 3px;background:linear-gradient(90deg,var(--g1),var(--g2));box-shadow:0 0 14px var(--gl)}
 .ck-card:focus:not(.is-flash){outline:none}
 @keyframes ckFlash{0%,100%{outline-color:rgba(143,184,255,0)}25%,60%{outline-color:rgba(143,184,255,.85)}}
 .ck-card.is-flash{outline:3px solid rgba(143,184,255,0);outline-offset:4px;animation:ckFlash 1.6s ease}
-.ck-main{display:flex;flex-direction:column;gap:14px;min-width:0;padding:26px 28px 24px}
-.ck-side{display:flex;flex-direction:column;gap:11px;min-width:0;margin:0 28px 24px;padding-top:18px;border-top:1px solid rgba(255,255,255,.09)}
-@container (min-width:940px){
-  .ck-card{grid-template-columns:minmax(0,1.32fr) minmax(0,1fr)}
-  .ck-side{margin:26px 0 24px;padding:2px 28px 0 30px;border-top:0;border-left:1px solid rgba(255,255,255,.09)}
-}
-.ck-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
-.ck-num{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));color:#0A1230;font-size:15px;font-weight:800;line-height:1;box-shadow:0 0 14px var(--gl)}
-.ck-steps{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 0}
-.ck-steps>span{margin-right:2px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#7083AE}
-.ck-step{display:inline-flex;align-items:center;gap:7px;height:28px;margin:0;padding:0 11px 0 4px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#DCE5FA;font:600 12.5px/1 var(--f);white-space:nowrap;cursor:pointer;transition:background-color .15s ease,border-color .15s ease}
-.ck-step b{display:grid;place-items:center;min-width:30px;height:20px;padding:0 6px;border-radius:10px;background:var(--g1);color:#0A1230;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}
-.ck-step:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.3)}
-.ck-step:focus-visible{outline:2px solid #8FB8FF;outline-offset:2px}
-.ck-q{margin:2px 0 0;font-size:25px;font-weight:700;line-height:1.28;letter-spacing:-.005em;color:var(--s-ink);text-wrap:balance}
-.ck-why{margin:0;font-size:16px;line-height:1.6;color:#C9D4EE}
-.ck-opts{list-style:none;margin:-4px 0 0;padding:0;display:grid;gap:8px}
-.ck-opt,.ck-plus{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03)}
-.ck-l{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);color:#E6ECFA;font-size:13px;font-weight:800;line-height:1}
-.ck-oh{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-height:26px}
-.ck-oh b{font-size:16px;font-weight:700;line-height:1.35;color:#F3F6FF}
-.ck-ob p{margin:3px 0 0;font-size:14.5px;line-height:1.55;color:#C9D4EE}
-.ck-tag{display:inline-flex;align-items:center;height:21px;padding:0 9px;border-radius:999px;background:#A9C7FF;color:#0B1430;font-size:10.5px;font-weight:800;letter-spacing:.1em;line-height:1;text-transform:uppercase;white-space:nowrap}
-.ck-opt.is-pick,.ck-plus{border-color:rgba(143,184,255,.55);background:rgba(143,184,255,.08)}
-.ck-opt.is-pick .ck-l{background:#A9C7FF;color:#0B1430}
-.ck-plus .ck-l{background:transparent;border:1.5px solid #A9C7FF;color:#A9C7FF}
-.ck-plus .ck-l svg{width:14px;height:14px}
-.ck-opt.is-his{border-color:rgba(134,239,172,.6);background:rgba(134,239,172,.07)}
-.ck-opt.is-his .ck-l{background:#86EFAC;color:#053321}
+.ck-ch{display:flex;align-items:center;gap:14px}
+.ck-num{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));color:#0A1230;font-size:15px;font-weight:800;line-height:1;box-shadow:0 0 14px var(--gl)}
+.ck-q{flex:1 1 auto;min-width:0;margin:0;font-size:22px;font-weight:700;line-height:1.3;letter-spacing:-.005em;color:var(--s-ink);text-wrap:balance}
+.ck-boxes{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin:18px 0 0}
+@container (min-width:760px){ .ck-boxes{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+.ck-box{display:flex;flex-direction:column;gap:12px;min-width:0;padding:16px 18px 16px;border-radius:14px}
+.ck-sugbox{background:rgba(143,184,255,.07);border:1px solid rgba(143,184,255,.35)}
+.ck-sugbox .ck-lh{color:#8FB8FF}
+.ck-pickbox{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.12);container-type:inline-size}
+.ck-bh{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:18px}
+.ck-mine{font-size:12px;font-weight:700;letter-spacing:.04em;color:#86EFAC}
+.ck-l{display:grid;place-items:center;flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);color:#E6ECFA;font-size:13px;font-weight:800;line-height:1}
+.ck-sug{display:flex;align-items:center;gap:11px}
+.ck-sug .ck-l{background:#A9C7FF;color:#0B1430}
+.ck-sug b{font-size:18px;font-weight:700;line-height:1.3;color:#F3F6FF}
+.ck-pts{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.ck-pts li{position:relative;padding-left:16px;font-size:14.5px;line-height:1.5;color:#C9D4EE}
+.ck-pts li::before{content:"";position:absolute;left:2px;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--g1)}
+/* who's in and who's out: a green tick or a soft red cross instead of the dot */
+.ck-pts li.is-ok,.ck-pts li.is-no{padding-left:23px;color:#E3EAFB}
+.ck-pts li.is-ok::before,.ck-pts li.is-no::before{left:0;top:.28em;width:15px;height:15px;border-radius:0}
+.ck-pts li.is-ok::before{background:#86EFAC;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.5 8.6l3.6 3.4 7.4-8' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.5 8.6l3.6 3.4 7.4-8' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
+.ck-pts li.is-no::before{background:#FCA5A5;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 4l8 8M12 4l-8 8' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 4l8 8M12 4l-8 8' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
+.ck-bf{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin-top:auto;padding-top:11px;border-top:1px solid rgba(255,255,255,.08)}
+.ck-steps{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.ck-steps>span{margin-right:3px;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#7083AE}
+.ck-step{display:inline-grid;place-items:center;min-width:38px;height:24px;margin:0;padding:0 8px;border:0;border-radius:12px;background:var(--g1);color:#0A1230;font:800 11.5px/1 var(--f);font-variant-numeric:tabular-nums;cursor:pointer;transition:filter .15s ease}
+.ck-step:hover{filter:brightness(1.12)}
+.ck-step:focus-visible{outline:2px solid #FFFFFF;outline-offset:2px}
+.ck-why{display:inline-flex;align-items:center;gap:6px;margin:0;padding:4px 2px;border:0;background:transparent;color:#A9C7FF;font:700 12.5px/1.2 var(--f);cursor:pointer}
+.ck-why::after{content:"";width:7px;height:7px;margin-top:-3px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg);transition:transform .2s ease}
+.ck-why[aria-expanded="true"]::after{margin-top:3px;transform:rotate(-135deg)}
+.ck-why:hover{color:#FFFFFF}
+.ck-why:focus-visible{outline:2px solid #8FB8FF;outline-offset:2px;border-radius:4px}
+.ck-wy{display:grid;gap:10px;padding:12px 14px;border-radius:12px;border:1px dashed rgba(200,215,255,.3);background:rgba(4,9,23,.35);font-size:14px;line-height:1.55;color:#C9D4EE}
+.ck-wy p{margin:0}
+.ck-wy b{color:#FFFFFF;font-weight:700}
+.ck-facts{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.ck-facts li{position:relative;padding-left:15px}
+.ck-facts li::before{content:"";position:absolute;left:2px;top:.62em;width:5px;height:5px;border-radius:50%;background:#7083AE}
+.ck-src{display:block;margin-top:1px;font-size:12px;line-height:1.4;color:#7F92BC}
+/* the options: one tap to pick, kept on this device only */
+.ck-opts{display:grid;gap:7px}
+.ck-o{position:relative;display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);cursor:pointer;transition:border-color .15s ease,background-color .15s ease}
+.ck-o:hover{border-color:rgba(255,255,255,.32);background:rgba(255,255,255,.06)}
+.ck-o input{position:absolute;left:12px;top:50%;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+.ck-o:focus-within{outline:2px solid #8FB8FF;outline-offset:2px}
+.ck-ot{min-width:0}
+.ck-ot b{display:block;font-size:15px;font-weight:700;line-height:1.35;color:#F3F6FF}
+.ck-ot small{display:block;margin-top:2px;font-size:12.5px;line-height:1.4;color:#93A6CF}
+.ck-tag{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;background:rgba(169,199,255,.16);color:#A9C7FF;font-size:10px;font-weight:800;letter-spacing:.1em;line-height:1;text-transform:uppercase;white-space:nowrap}
+.ck-o.is-sug{border-color:rgba(143,184,255,.4)}
+.ck-o.is-on{border-color:rgba(134,239,172,.75);background:rgba(134,239,172,.09)}
+.ck-o.is-on .ck-l{background:#86EFAC;color:#053321}
+.ck-o.is-his{border-color:rgba(134,239,172,.75);background:rgba(134,239,172,.09);cursor:default}
+.ck-o.is-his .ck-l{background:#86EFAC;color:#053321}
 .ck-tag.is-his{background:#86EFAC;color:#053321}
-.ck-rsn{margin:0;padding:12px 14px;border-radius:12px;border:1px dashed rgba(200,215,255,.3);background:rgba(255,255,255,.035);font-size:15px;line-height:1.55;color:#C9D4EE}
-.ck-rsn b{color:#FFFFFF;font-weight:700}
-.ck-facts{list-style:none;margin:-2px 0 4px;padding:0;display:grid;gap:11px}
-.ck-facts li{position:relative;padding-left:17px;font-size:14.5px;line-height:1.55;color:#C9D4EE}
-.ck-facts li::before{content:"";position:absolute;left:2px;top:.6em;width:6px;height:6px;border-radius:50%;background:var(--g1)}
-.ck-src{display:block;margin-top:2px;font-size:12.5px;line-height:1.4;color:#7F92BC}
-.ck-next{margin:-2px 0 4px;font-size:14.5px;line-height:1.55;color:#E3EAFB}
-.ck-ans{margin-top:auto;padding:12px 14px;border-radius:12px;border:1.5px dashed rgba(251,191,36,.6);background:rgba(251,191,36,.06);font-size:14.5px;line-height:1.5;color:#FDE68A}
-.ck-ans b{display:block;margin-bottom:3px;font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FCD34D}
-.ck-ans.is-done{border:1.5px solid rgba(134,239,172,.55);background:rgba(134,239,172,.07);color:#D1FAE5}
-.ck-ans.is-done b{color:#86EFAC}
-.ck-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;margin:26px 0 0;font-size:13px;line-height:1.5;color:#6F82AD}
+.ck-opts.is-locked .ck-o{cursor:default}
+.ck-opts.is-locked .ck-o:not(.is-his){opacity:.5}
+.ck-opts.is-locked .ck-o:hover{background:rgba(255,255,255,.03)}
+.ck-opts.is-locked .ck-o.is-his:hover{background:rgba(134,239,172,.09)}
+/* a narrow pick box puts the "Our suggestion" tag under the option, so the words keep their room */
+@container (max-width:460px){
+  .ck-o{grid-template-columns:26px minmax(0,1fr)}
+  .ck-o .ck-tag{grid-column:2;justify-self:start;margin-top:-2px}
+}
+.ck-note{margin:0;font-size:14px;line-height:1.5;color:#D1FAE5}
+/* sending the picks back */
+.ck-send{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;margin:20px 0 0;padding:16px 20px;border-radius:16px;border:1.5px dashed rgba(143,184,255,.5);background:rgba(143,184,255,.06)}
+.ck-send p{margin:0;font-size:15px;line-height:1.5;color:#C9D4EE}
+.ck-send p b{color:#FFFFFF}
+.ck-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ck-btn{display:inline-flex;align-items:center;gap:8px;height:36px;margin:0;padding:0 14px;border-radius:10px;border:1px solid #A9C7FF;background:#A9C7FF;color:#0B1430;font:700 13px/1 var(--f);cursor:pointer;white-space:nowrap;transition:background-color .15s ease,border-color .15s ease}
+.ck-btn:hover{background:#CADCFF;border-color:#CADCFF}
+.ck-btn.is-ghost{background:transparent;border-color:rgba(255,255,255,.24);color:#DCE5FA}
+.ck-btn.is-ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.4)}
+.ck-btn:focus-visible{outline:2px solid #FFFFFF;outline-offset:2px}
+.ck-btn svg{width:15px;height:15px}
+.ck-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;margin:22px 0 0;font-size:13px;line-height:1.5;color:#6F82AD}
 .ck-foot b{color:#9DB2DA;font-weight:600}
 /* links from the flowchart's "to confirm" notes into the checklist */
 .ck-link{margin-left:3px;color:#A9C7FF;font-weight:700;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px;border-radius:3px}
@@ -568,19 +592,18 @@ b .term{font-weight:inherit}
 .ck-link:hover,.ck-link:focus-visible{color:#FFFFFF}
 .ck-link:focus-visible{outline:2px solid #8FB8FF;outline-offset:2px}
 @media only screen and (max-width:620px){
-  .ck-sheet{padding:26px 18px 22px;border-radius:14px}
+  .ck-sheet{padding:26px 16px 22px;border-radius:14px}
   .ck-head{align-items:flex-start}
   .ck-logo{width:100px;height:25px}
   .ck-eb{font-size:11px;letter-spacing:.16em}
   .ck-title{font-size:27px}
   .ck-sub{font-size:15.5px}
-  .ck-gw{padding:12px 10px 6px}
-  .ck-main{padding:22px 18px 20px}
-  .ck-side{margin:0 18px 20px}
-  .ck-q{font-size:21px}
-  .ck-why{font-size:15.5px}
-  .ck-g .ck-st{padding:5px}
-  .ck-g .ck-stt{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .ck-card{padding:20px 14px 16px}
+  .ck-ch{flex-wrap:wrap;gap:10px 12px}
+  .ck-q{flex-basis:100%;order:2;font-size:19px}
+  .ck-box{padding:14px}
+  .ck-o{gap:10px;padding:10px}
+  .ck-send{padding:14px}
   .ck-foot{flex-direction:column}
 }
 
@@ -615,11 +638,11 @@ b .term{font-weight:inherit}
       <div class="ui-rail-region">Finsfree pilot</div>
       <div class="ui-rail-sub">Malaysia, Vietnam and South Korea ·<br>IB bots, end to end</div>
       <div class="ui-prog-label">Aaron to confirm</div>
-      <button type="button" class="ui-prog" id="ckProg" aria-controls="panel-checklist" aria-label="Aaron to confirm: 0 of 5 confirmed. Open Aaron's checklist."><span class="ui-prog-top"><span class="ui-prog-n" id="ckProgN">0 / 5</span><span class="ui-prog-s">confirmed</span></span><span class="ui-prog-bar"><i id="ckProgBar"></i></span></button>
+      <button type="button" class="ui-prog" id="ckProg" aria-controls="panel-checklist" aria-label="Aaron to confirm: 0 of 6 confirmed. Open Aaron's checklist."><span class="ui-prog-top"><span class="ui-prog-n" id="ckProgN">0 / 6</span><span class="ui-prog-s">confirmed</span></span><span class="ui-prog-bar"><i id="ckProgBar"></i></span></button>
     </div>
     <nav class="ui-list" aria-label="Playbook tabs">
       <button type="button" class="ui-item is-active" id="tab-summary" aria-current="page" aria-controls="panel-summary"><span class="ui-item-top"><span class="ui-item-name">Executive summary</span><span class="ui-chip">1 min</span></span><span class="ui-item-role">The Finsfree flow at a glance</span></button>
-      <button type="button" class="ui-item" id="tab-checklist" aria-controls="panel-checklist"><span class="ui-item-top"><span class="ui-item-name">Aaron's checklist</span><span class="ui-chip is-red" id="ckChip">5</span></span><span class="ui-item-role">5 decisions, each with our suggestion</span></button>
+      <button type="button" class="ui-item" id="tab-checklist" aria-controls="panel-checklist"><span class="ui-item-top"><span class="ui-item-name">Aaron's checklist</span><span class="ui-chip is-red" id="ckChip">6</span></span><span class="ui-item-role">6 quick questions, with our suggestion</span></button>
       <div class="ui-group">Start here</div>
       <button type="button" class="ui-item is-pending" id="tab-p01" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">01 What Finsfree is</span><span class="ui-chip is-muted">Facts</span></span><span class="ui-item-role">Bots, AI website, indicators and EAs</span></button>
       <button type="button" class="ui-item is-pending" id="tab-p02" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">02 Pilot markets</span><span class="ui-chip is-muted">Facts</span></span><span class="ui-item-role">Malaysia, Vietnam, Korea and their IBs</span></button>
@@ -627,7 +650,7 @@ b .term{font-weight:inherit}
       <button type="button" class="ui-item is-pending" id="tab-p03" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">03 Picking IBs</span><span class="ui-chip is-red">1</span></span><span class="ui-item-role">Who fits, and Edwin's minimum</span></button>
       <button type="button" class="ui-item is-pending" id="tab-p04" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">04 Building the bot</span><span class="ui-chip is-muted">Facts</span></span><span class="ui-item-role">The form, build times, languages</span></button>
       <div class="ui-group">Run it</div>
-      <button type="button" class="ui-item is-pending" id="tab-p05" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">05 Pro approval</span><span class="ui-chip is-red">3</span></span><span class="ui-item-role">The AM's check, step by step</span></button>
+      <button type="button" class="ui-item is-pending" id="tab-p05" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">05 Pro approval</span><span class="ui-chip is-red">4</span></span><span class="ui-item-role">The AM's check, step by step</span></button>
       <button type="button" class="ui-item is-pending" id="tab-p06" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">06 Renewals and reviews</span><span class="ui-chip is-red">1</span></span><span class="ui-item-role">Monthly checks, and when a bot stops</span></button>
       <div class="ui-group">Keep it right</div>
       <button type="button" class="ui-item is-pending" id="tab-p07" aria-disabled="true"><span class="ui-item-top"><span class="ui-item-name">07 What not to promise</span><span class="ui-chip is-muted">Facts</span></span><span class="ui-item-role">No win rates, profit or guarantees</span></button>
@@ -968,7 +991,7 @@ var NODES=[
    tl:{h:'Pro minimums so far, lowest to highest',
     items:[{d:'USD 30',t:'One Thai IB\'s bot'},{d:'USD 50',t:'Indonesia\'s bots'},{d:'USD 500',t:'Aaron\'s suggestion (3 Nov)'},{d:'USD 1,000',t:'An Indonesian IB\'s AI website'}],
     n:'Not set yet for Malaysia, Vietnam or Korea. It\'s separate from Edwin\'s minimum, which is the IB\'s own target.'},
-   note:{lead:'To confirm',t:'The Pro minimum for each pilot IB, and how fast the AM should approve.',ck:2},
+   note:{lead:'To confirm',t:'The Pro minimum for each pilot IB, and how fast the AM should approve.',ck:[2,5]},
    owner:'The IB\'s AM, as Aaron agreed for now.',
    where:'Salesforce, then the Telegram alert.',
    time:'Not set yet. A Thai IB\'s request asks for activation within 24 hours.',
@@ -1025,7 +1048,7 @@ var NODES=[
    tl:{h:'Edwin\'s minimum, from go-live',
     items:[{d:'Go live',t:'The clock starts',start:1},{d:'Month 2',t:'30 FTDs and USD 1,500 in total',gap:'2 months'},{d:'Month 3 on',t:'10 FTDs a month'}],
     n:'Miss it for more than 2 months, and Finsfree stops maintaining the bot.'},
-   note:{lead:'To confirm with Aaron',t:'Who checks each IB\'s numbers every month, and whether Edwin\'s minimum is the bar in all three markets. Fetra will make the same tracking report for the new markets, and Salesforce stays the source of truth.',ck:[1,5]},
+   note:{lead:'To confirm with Aaron',t:'Who checks each IB\'s numbers every month, and whether Edwin\'s minimum is the target in all three markets. Fetra will make the same tracking report for the new markets, and Salesforce stays the source of truth.',ck:[1,6]},
    owner:'No set owner yet. Fetra tracks Indonesia\'s numbers today.',
    where:'Salesforce, and Fetra\'s tracking report.',
    time:'Monthly.',
@@ -1765,63 +1788,61 @@ if(!reduce&&'IntersectionObserver' in window&&document.body.animate){
   },{threshold:.2});
   WRAPS.slice(1).forEach(function(w){ io.observe(w); });
 }
-/* ---------- Aaron's checklist: what Aaron needs to confirm, in flowchart order, each with our suggestion ----------
-   To record an answer, set ans on the item, for example ans:{pick:'A',on:'13 Nov',note:'Korea can go higher later.'} */
+/* ---------- Aaron's checklist: quick multiple-choice questions, in flowchart order, each with our suggestion ----------
+   Each card: the question, our suggestion on the left (short), the options to pick on the right.
+   A viewer's picks stay on their own device until they copy them; to record Aaron's answer for everyone,
+   set ans on the item, for example ans:{pick:'A',on:'13 Nov',note:'Korea can go higher later.'} */
 var CK_DATE='12 Nov 2026';
+var CK_ELSE={k:'',h:'Something else',d:'Tell us what in your reply'};
 var CHECK=[
  {n:1,stage:5,tab:'p03',steps:['d13','n51','n52'],
-  short:'The bar to keep a bot',
-  glance:'Edwin\'s minimum in all 3 markets, for now',
-  q:'What bar should a pilot IB meet to keep their bot?',
-  why:'Each IB agrees to this bar before we build (step 1.3), and it decides when Finsfree stops maintaining their bot.',
+  short:'The target to keep a bot',
+  q:'What target must a pilot IB hit to keep their bot?',
   opts:[
-   {k:'A',h:'Edwin\'s minimum in all 3 markets',t:'30 FTDs and USD 1,500 in first deposits in the first 2 months, then at least 10 FTDs a month. We look at higher bars once we have results.'},
-   {k:'B',h:'Higher for Korea',t:'Edwin\'s minimum for Malaysia and Vietnam, and a higher bar for Korea that Aaron sets before Korea\'s IBs are picked.'},
-   {k:'C',h:'A bar for each IB',t:'Each AM agrees one with their IB, never below Edwin\'s minimum.'}
+   {k:'A',h:'Edwin\'s minimum, the same in all 3 markets',d:'30 FTDs and USD 1,500 in first deposits in the first 2 months, then at least 10 FTDs a month, in Malaysia, Vietnam and Korea alike'},
+   {k:'B',h:'A higher target for Korea',d:'Malaysia and Vietnam use Edwin\'s minimum. Aaron sets a higher one for Korea before its IBs are picked'},
+   {k:'C',h:'A target for each IB',d:'Each AM agrees one with their IB, never below Edwin\'s minimum'}
   ],
   pick:'A',
-  rsn:'Edwin kept his minimum low on purpose while we test, so we don\'t put IBs off, and Aaron saw a bar per market as a step for after the testing. Korea\'s IBs aren\'t picked yet, so B can still come before they are.',
+  pts:['First 2 months after go-live: 30 FTDs and USD 1,500 in first deposits','Every month after that: at least 10 FTDs','Miss it for more than 2 months, and Finsfree stops maintaining the bot','We look at higher targets, like Korea\'s, once we have results'],
+  rsn:'Edwin kept his minimum low on purpose while we test, so we don\'t put IBs off, and Aaron saw a target per market as a step for after the testing. Korea\'s IBs aren\'t picked yet, so B can still come before they are.',
   facts:[
    {t:'Edwin\'s minimum is TMGM\'s floor in every market, and sales can ask an IB for more. He kept it low so we don\'t put IBs off while we test.',s:'Edwin, 3 Nov'},
    {t:'Aaron expects more deposits from Korean IBs, and suggested an SOP per market for when we keep or stop a bot.',s:'Aaron, 3 Nov'},
-   {t:'Miss the minimum for more than 2 months, and Finsfree stops maintaining the bot. Fetra was stopping one Indonesian bot the next day for not bringing numbers.',s:'Edwin, 3 Nov; Fetra\'s walkthrough, 3 Nov'}
+   {t:'Fetra was stopping one Indonesian bot the next day for not bringing numbers.',s:'Fetra\'s walkthrough, 3 Nov'}
   ],
-  next:'The AM explains the bar to each IB at step 1.3, before we build.',
+  next:'The AM explains the target to each IB at step 1.3, before we build.',
   ans:null},
  {n:2,stage:3,tab:'p05',steps:['d13','d34','n41'],
-  short:'The Pro minimum, and how fast the AM approves',
-  glance:'USD 500, approved within 1 working day',
-  q:'What Pro minimum should clients keep, and how fast should the AM approve?',
-  why:'The Pro minimum is the balance a client keeps in their TMGM account to get Pro, and to keep it each month. It isn\'t set in the bot, so each IB needs an amount before they agree to our terms.',
+  short:'The Pro minimum',
+  q:'How much must a client keep in their TMGM account to get Pro?',
   opts:[
-   {k:'A',h:'USD 500 for every pilot IB',t:'As Aaron suggested on 3 Nov. An AM can agree a higher amount with their IB.'},
-   {k:'B',h:'Each AM sets it with their IB',t:'No starting amount, so it can differ between IBs in the same market.'},
-   {k:'C',h:'USD 50, like Indonesia',t:'The easiest for clients to reach, but Aaron felt it was too low.'}
+   {k:'A',h:'USD 500, for every pilot IB',d:'As Aaron suggested on 3 Nov. An AM can agree a higher amount with their IB, but not a lower one'},
+   {k:'B',h:'An amount each AM sets with their IB',d:'No starting amount, so it can differ between IBs, even in the same country'},
+   {k:'C',h:'USD 50, the same as Indonesia',d:'Easiest for clients to reach, but Aaron felt it was too low'}
   ],
-  plus:{h:'How fast',t:'The AM approves within 1 working day of the client\'s request.'},
   pick:'A',
-  rsn:'It\'s Aaron\'s own number, and one amount lets us compare the pilot IBs fairly. The trade-off: fewer clients may reach USD 500, and each IB still needs 30 FTDs in its first 2 months. For the timing, 1 working day is close to the 24 hours a Thai IB asked for, and markets are closed at weekends, so a client who asks then loses little by waiting for Monday.',
+  pts:['A client needs at least USD 500 in their TMGM account to get Pro','They still need it there to renew Pro each month','An AM can agree a higher amount with their IB'],
+  rsn:'It\'s Aaron\'s own number, and one amount lets us compare the pilot IBs fairly. The trade-off: fewer clients may reach USD 500, and each IB still needs 30 FTDs in its first 2 months.',
   facts:[
    {t:'Indonesia\'s bots use USD 50. First deposits there average about USD 93: about 200 clients and about USD 18,700 in total.',s:'Fetra\'s sheet, shown on 3 Nov'},
    {t:'Aaron saw good FTD numbers in Indonesia but low deposits, probably because of the USD 50 minimum, and suggested about USD 500.',s:'Aaron, 3 Nov'},
    {t:'The amount isn\'t set in the bot, so each IB can agree its own with its AM.',s:'Fetra, 11 Nov'},
-   {t:'To keep Pro after a month, the account must still hold the amount agreed with the IB.',s:'Aaron, 10 Nov'},
-   {t:'A Thai IB\'s request, under review, asks sales to activate within 24 hours.',s:'Fetra\'s walkthrough, 3 Nov'}
+   {t:'To keep Pro after a month, the account must still hold the amount agreed with the IB.',s:'Aaron, 10 Nov'}
   ],
   next:'The AM tells each IB the amount at step 1.3, and it goes in their request form.',
   ans:null},
  {n:3,stage:3,tab:'p05',steps:['n21','n32','d34'],
   short:'Which clients can get Pro',
-  glance:'New clients, plus the IB\'s own',
-  q:'Which clients can get Pro: only new ones, or existing TMGM clients too?',
-  why:'The request form asks every IB "Do existing TMGM clients qualify?", so each AM needs one answer before their IB fills it in.',
+  q:'Which clients can get Pro on a pilot IB\'s bot?',
   opts:[
-   {k:'A',h:'New clients only',t:'People who open their first TMGM account through the IB link.'},
-   {k:'B',h:'New clients, plus the IB\'s own',t:'Clients already under the pilot IB qualify too, once they meet the Pro minimum. Nobody changes IB.'},
-   {k:'C',h:'Clients from anywhere at TMGM',t:'Clients of other IBs, or with no IB, can move under the pilot IB, or sign up again through its link as in Indonesia.'}
+   {k:'A',h:'Only brand-new TMGM clients',d:'People opening their first TMGM account through the IB\'s link. The IB\'s existing TMGM clients can\'t get Pro'},
+   {k:'B',h:'New clients, plus the IB\'s existing TMGM clients',d:'Also clients who already trade with TMGM under this same IB. Clients under other IBs can\'t switch over to get it'},
+   {k:'C',h:'Any TMGM client, even from another IB',d:'Clients under another IB, or with no IB, can move under the pilot IB, or sign up again through its link, as in Indonesia'}
   ],
   pick:'B',
-  rsn:'It\'s the check the AM already makes at step 3.4: the client is under this IB and meets the Pro minimum. No client moves between IBs, so other IBs and their AMs aren\'t affected, and the pilot\'s FTDs stay new clients.',
+  pts:[{ok:1,t:'New clients who open a TMGM account through the IB\'s link'},{ok:1,t:'Clients who already trade with TMGM under this same IB'},{ok:0,t:'Clients under another IB: they can\'t switch over just to get Pro'},{ok:0,t:'TMGM clients with no IB'},'Everyone who can get Pro still needs the Pro minimum in their account'],
+  rsn:'It\'s the check the AM already makes at step 3.4: the client is under this IB and meets the Pro minimum. No client moves between IBs, so other IBs and their AMs aren\'t affected, and the pilot\'s FTDs stay new clients. The request form asks every IB "Do existing TMGM clients qualify?", so each AM needs this answer before their IB fills it in.',
   facts:[
    {t:'In Indonesia, clients already under another IB sign up again through the new IB\'s link.',s:'Fetra, 8 Oct'},
    {t:'Because of that, Fetra\'s own count runs higher than Salesforce, 178 against 173: some clients signed up under more than one IB.',s:'Fetra, 8 Oct'},
@@ -1832,15 +1853,14 @@ var CHECK=[
   ans:null},
  {n:4,stage:3,tab:'p05',steps:['n24','d34','n41'],
   short:'Who can approve Pro',
-  glance:'Only the AM',
-  q:'Should only the AM have the Approve button?',
-  why:'Whoever Fetra adds as an approver gets every Pro request as a Telegram alert with Approve and Reject buttons. So who we add decides who has the final say.',
+  q:'Who should get the Approve button for Pro requests?',
   opts:[
-   {k:'A',h:'Only the AM',t:'Fetra adds only the AM\'s Telegram ID, so only the AM can approve. The IB still looks after their community.'},
-   {k:'B',h:'The AM and the IB',t:'Both can approve, as in Indonesia, where the IB\'s admin approves. Clients may get Pro faster, but the IB could approve a client the AM wouldn\'t.'}
+   {k:'A',h:'Only the AM',d:'Fetra adds only the AM\'s Telegram ID, so only the AM can approve. The IB can\'t'},
+   {k:'B',h:'The AM and the IB',d:'Both get the Approve button, as in Indonesia. Clients may get Pro faster, but the IB could approve a client the AM wouldn\'t'}
   ],
   pick:'A',
-  rsn:'It keeps what Aaron agreed on 10 Nov: the AM gives the final OK, for now, and we see how it goes.',
+  pts:['Every Pro request reaches the AM as a Telegram alert, with Approve and Reject buttons','The final OK stays with the AM, as Aaron agreed on 10 Nov, for now','The IB still looks after their community'],
+  rsn:'Whoever Fetra adds as an approver gets every Pro request, so who we add decides who has the final say. With A, that stays with the AM, and we see how it goes.',
   facts:[
    {t:'Final approval sits with the IB\'s AM, for now, and we see how it goes.',s:'Aaron, 10 Nov'},
    {t:'Approvers are added by Telegram ID. The IB can be added too, and then gets the same Approve button.',s:'Fetra, 11 Nov'},
@@ -1848,16 +1868,33 @@ var CHECK=[
   ],
   next:'Each AM sends Fetra their Telegram ID before go-live.',
   ans:null},
- {n:5,stage:5,tab:'p06',steps:['n51','n52'],
-  short:'Who checks each IB every month',
-  glance:'Each AM, using Fetra\'s monthly report',
-  q:'Who checks each pilot IB\'s numbers every month?',
-  why:'Edwin\'s minimum is counted every month. For the new markets, nobody is set to check it yet.',
+ {n:5,stage:3,tab:'p05',steps:['d34','n41'],
+  short:'How fast the AM approves',
+  q:'How fast should the AM approve a client\'s Pro request?',
   opts:[
-   {k:'A',h:'Each AM, for their own IB',t:'Fetra sends his tracking report at the start of each month, and each AM checks their own IB against Edwin\'s minimum.'},
-   {k:'B',h:'Fetra, for all pilot IBs',t:'Fetra checks every IB from his report, as he does for Indonesia today, and tells the AM when one falls short.'}
+   {k:'A',h:'Within 1 working day',d:'By the next working day. Weekends and public holidays don\'t count'},
+   {k:'B',h:'Within 24 hours, weekends too',d:'Every day of the week. A Thai IB asked for 24 hours'},
+   {k:'C',h:'No set time',d:'Each AM approves when they can'}
   ],
   pick:'A',
+  pts:['A client who asks on a working day gets Pro by the next working day','AMs don\'t need to approve at weekends, when markets are closed','Pro\'s 30 days only start when the AM approves, so the client loses no days'],
+  rsn:'It\'s close to the 24 hours a Thai IB asked for, without asking AMs to work weekends. Markets are closed at weekends anyway, so a client who asks then loses little by waiting for Monday.',
+  facts:[
+   {t:'A Thai IB\'s request, under review, asks sales to activate within 24 hours.',s:'Fetra\'s walkthrough, 3 Nov'},
+   {t:'Pro switches on for 30 days when the AM taps Approve.',s:'Fetra\'s walkthrough, 3 Nov; Fetra, 11 Nov'},
+   {t:'If the market is closed, an analysis is cancelled and no free try is used.',s:'Fetra\'s walkthrough, 3 Nov'}
+  ],
+  next:'The AM approves each Pro request within 1 working day, and renewals the same way.',
+  ans:null},
+ {n:6,stage:5,tab:'p06',steps:['n51','n52'],
+  short:'Who checks each IB every month',
+  q:'Who checks each pilot IB\'s numbers against Edwin\'s minimum every month?',
+  opts:[
+   {k:'A',h:'Each AM checks their own IB',d:'Using the tracking report Fetra sends at the start of each month'},
+   {k:'B',h:'Fetra checks all pilot IBs',d:'From his report, as he does for Indonesia today, and he tells the AM when one falls short'}
+  ],
+  pick:'A',
+  pts:['Fetra sends his tracking report at the start of each month','Each AM checks their own IB against Edwin\'s minimum','If an IB falls short, their AM talks to them early'],
   rsn:'The AM looks after the IB, so they can talk to them early when the numbers fall short. Fetra is already making this report for sales to track their IBs, so nobody needs to pull numbers separately.',
   facts:[
    {t:'Edwin\'s minimum: 30 FTDs and USD 1,500 in the first 2 months, then at least 10 FTDs a month. Miss it for more than 2 months, and Finsfree stops maintaining the bot.',s:'Edwin, 3 Nov'},
@@ -1867,7 +1904,9 @@ var CHECK=[
   next:'Each AM gets Fetra\'s report at the start of each month and talks to any IB that falls short.',
   ans:null}
 ];
-function ckOpt(it,k){ for(var i=0;i<it.opts.length;i++) if(it.opts[i].k===k) return it.opts[i]; return {k:k,h:''}; }
+/* every question ends with "Something else", lettered after the real options */
+CHECK.forEach(function(it){ it.all=it.opts.concat([{k:String.fromCharCode(65+it.opts.length),h:CK_ELSE.h,d:CK_ELSE.d}]); });
+function ckOpt(it,k){ for(var i=0;i<it.all.length;i++) if(it.all[i].k===k) return it.all[i]; return {k:k,h:''}; }
 function ckOpenN(){ var c=0; CHECK.forEach(function(it){ if(!it.ans) c++; }); return c; }
 function ckAttr(s){ return esc(s).replace(/"/g,'&quot;'); }
 function ckVars(st){ var c=STAGE_C[st]; return '--g1:'+c[0]+';--g2:'+c[1]+';--gl:'+rgba(c[1],.5); }
@@ -1877,54 +1916,61 @@ function ckLink(ck){
   return ' <a class="ck-link" href="#checklist" data-ck="'+a[0]+'">See '+lab+' in Aaron\'s checklist</a>';
 }
 function ckStatus(it){
-  return it.ans?'<span class="ck-st is-done"><i aria-hidden="true"></i><span class="ck-stt">Confirmed</span></span>':'<span class="ck-st"><i aria-hidden="true"></i><span class="ck-stt">To confirm</span></span>';
+  return it.ans?'<span class="ck-st is-done"><i aria-hidden="true"></i>Confirmed</span>':'<span class="ck-st"><i aria-hidden="true"></i>To confirm</span>';
 }
 function ckStepBtn(k){
-  var n=NM[k], c=STAGE_C[stageOf(n)], num=n.id||n.num;
-  return '<button type="button" class="ck-step" data-step="'+k+'" style="--g1:'+c[0]+'" aria-label="'+ckAttr('Open step '+num+', '+(n.title||n.name)+', on the flowchart')+'"><b>'+esc(num)+'</b>'+esc(n.name)+'</button>';
+  var n=NM[k], c=STAGE_C[stageOf(n)], num=n.id||n.num, lab='Step '+num+', '+(n.title||n.name)+'. Open it on the flowchart';
+  return '<button type="button" class="ck-step" data-step="'+k+'" style="--g1:'+c[0]+'" title="'+ckAttr(lab)+'" aria-label="'+ckAttr(lab)+'">'+esc(num)+'</button>';
 }
-var CK_CLOCK='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 4.6V8l2.4 1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/* a viewer's own picks, kept in this browser only until they copy and send them */
+var CK_KEY='finsfree-ck-picks-v1', ckPicks={};
+try{ ckPicks=JSON.parse(localStorage.getItem(CK_KEY)||'{}')||{}; }catch(e){ ckPicks={}; }
+function ckSave(){ try{ localStorage.setItem(CK_KEY,JSON.stringify(ckPicks)); }catch(e){} }
+function ckPickN(){ var c=0; CHECK.forEach(function(it){ if(!it.ans&&ckPicks[it.n]) c++; }); return c; }
+
 function ckCard(it){
   var used={};
   function T(s){ return terms(esc(nb(s)),used); }
-  /* built in reading order, so each word is underlined where it first appears */
-  var why=T(it.why);
-  var opts=it.opts.map(function(o){
-    var me=o.k===it.pick, his=!!(it.ans&&it.ans.pick===o.k);
-    return '<li class="ck-opt'+(me?' is-pick':'')+(his?' is-his':'')+'"><span class="ck-l"><span class="ck-sr">Option </span>'+o.k+'</span><div class="ck-ob"><div class="ck-oh"><b>'+esc(o.h)+'</b>'
-      +(me?'<span class="ck-tag">Our suggestion</span>':'')+(his?'<span class="ck-tag is-his">Aaron\'s pick</span>':'')
-      +'</div><p>'+T(o.t)+'</p></div></li>';
+  var sug=ckOpt(it,it.pick), mine=it.ans?it.ans.pick:ckPicks[it.n];
+  var left='<div class="ck-box ck-sugbox">'
+    +'<div class="ck-bh"><p class="ck-lh">Our suggestion</p></div>'
+    +'<div class="ck-sug"><span class="ck-l">'+it.pick+'</span><b>'+esc(sug.h)+'</b></div>'
+    +'<ul class="ck-pts">'+it.pts.map(function(p){
+      if(typeof p==='string') return '<li>'+T(p)+'</li>';
+      return '<li class="'+(p.ok?'is-ok':'is-no')+'"><span class="ck-sr">'+(p.ok?'Yes: ':'No: ')+'</span>'+T(p.t)+'</li>';
+    }).join('')+'</ul>'
+    +'<div class="ck-bf"><span class="ck-steps"><span>On the flowchart</span>'+it.steps.map(ckStepBtn).join('')+'</span>'
+    +'<button type="button" class="ck-why" aria-expanded="false" aria-controls="ckw-'+it.n+'">Why, and sources</button></div>'
+    +'<div class="ck-wy" id="ckw-'+it.n+'" hidden><p><b>Why we suggest '+it.pick+'.</b> '+T(it.rsn)+'</p>'
+    +'<ul class="ck-facts">'+it.facts.map(function(f){ return '<li>'+T(f.t)+'<span class="ck-src">'+esc(nb(f.s))+'</span></li>'; }).join('')+'</ul>'
+    +'<p><b>After a yes:</b> '+T(it.next)+'</p></div>'
+    +'</div>';
+  var head=it.ans
+    ?'<p class="ck-lh">Aaron\'s answer</p><span class="ck-mine">'+(it.ans.on?esc(nb(it.ans.on)):'Confirmed')+'</span>'
+    :'<p class="ck-lh" id="ckp-'+it.n+'">Pick one</p><span class="ck-mine" id="ckm-'+it.n+'">'+(mine?'You picked '+mine:'')+'</span>';
+  var opts=it.all.map(function(o){
+    var isSug=o.k===it.pick, on=mine===o.k;
+    var cls='ck-o'+(isSug?' is-sug':'')+(on?(it.ans?' is-his':' is-on'):'');
+    return '<label class="'+cls+'"><input type="radio" name="ck-'+it.n+'" value="'+o.k+'"'+(on?' checked':'')+(it.ans?' disabled':'')+'>'
+      +'<span class="ck-l" aria-hidden="true">'+o.k+'</span><span class="ck-ot"><b><span class="ck-sr">'+o.k+'. </span>'+esc(o.h)+'</b><small>'+esc(o.d)+'</small></span>'
+      +(it.ans&&on?'<span class="ck-tag is-his">Aaron\'s answer</span>':(isSug?'<span class="ck-tag">Our suggestion</span>':''))
+      +'</label>';
   }).join('');
-  var plus=it.plus?'<div class="ck-plus"><span class="ck-l">'+CK_CLOCK+'</span><div class="ck-ob"><div class="ck-oh"><b>'+esc(it.plus.h)+'</b><span class="ck-tag">Our suggestion</span></div><p>'+T(it.plus.t)+'</p></div></div>':'';
-  var rsn=T(it.rsn);
-  var facts=it.facts.map(function(f){ return '<li>'+T(f.t)+'<span class="ck-src">'+esc(nb(f.s))+'</span></li>'; }).join('');
-  var next=T(it.next);
-  var ans=it.ans
-    ?'<div class="ck-ans is-done"><b>Aaron\'s answer'+(it.ans.on?' · '+esc(nb(it.ans.on)):'')+'</b>'+esc(it.ans.pick)+'. '+esc(ckOpt(it,it.ans.pick).h)+(it.ans.note?'. '+T(it.ans.note):'')+'</div>'
-    :'<div class="ck-ans"><b>Aaron\'s answer</b>Waiting for Aaron</div>';
+  var right='<div class="ck-box ck-pickbox"><div class="ck-bh">'+head+'</div>'
+    +'<div class="ck-opts'+(it.ans?' is-locked':'')+'" role="radiogroup" aria-labelledby="ckq-'+it.n+'">'+opts+'</div>'
+    +(it.ans&&it.ans.note?'<p class="ck-note">'+T(it.ans.note)+'</p>':'')
+    +'</div>';
   return '<article class="ck-card" id="ck-'+it.n+'" style="'+ckVars(it.stage)+'" aria-labelledby="ckq-'+it.n+'">'
-    +'<div class="ck-main">'
-    +'<div class="ck-top"><span class="ck-num" aria-hidden="true">'+it.n+'</span>'+ckStatus(it)+'</div>'
-    +'<h3 class="ck-q" id="ckq-'+it.n+'"><span class="ck-sr">'+it.n+'. </span>'+esc(it.q)+'</h3>'
-    +'<div class="ck-steps"><span>On the flowchart</span>'+it.steps.map(ckStepBtn).join('')+'</div>'
-    +'<p class="ck-why">'+why+'</p>'
-    +'<p class="ck-lh">The options</p><ul class="ck-opts">'+opts+'</ul>'+plus
-    +'<p class="ck-rsn"><b>Why we suggest '+it.pick+'.</b> '+rsn+'</p>'
-    +'</div>'
-    +'<div class="ck-side">'
-    +'<p class="ck-lh">What we know</p><ul class="ck-facts">'+facts+'</ul>'
-    +'<p class="ck-lh">After a yes</p><p class="ck-next">'+next+'</p>'
-    +ans
-    +'</div>'
+    +'<div class="ck-ch"><span class="ck-num" aria-hidden="true">'+it.n+'</span><h3 class="ck-q" id="ckq-'+it.n+'"><span class="ck-sr">'+it.n+'. </span>'+esc(it.q)+'</h3>'+ckStatus(it)+'</div>'
+    +'<div class="ck-boxes">'+left+right+'</div>'
     +'</article>';
 }
-function ckGlance(){
-  return CHECK.map(function(it){
-    var s=it.ans?(it.ans.pick+'. '+ckOpt(it,it.ans.pick).h):it.glance;
-    return '<li><button type="button" class="ck-g" data-ck="'+it.n+'" style="'+ckVars(it.stage)+'"><span class="ck-gn" aria-hidden="true">'+it.n+'</span>'
-      +'<span class="ck-gq"><span class="ck-sr">'+it.n+'. </span>'+esc(it.short)+'</span>'
-      +'<span class="ck-gs"><em>'+(it.ans?'Aaron chose':'We suggest')+'</em>'+esc(s)+'</span>'+ckStatus(it)+'</button></li>';
-  }).join('');
+function ckSendHTML(){
+  var n=ckPickN(), open=ckOpenN();
+  return '<p>'+(n?'<b>You\'ve picked '+n+' of '+open+'.</b> ':'')+'Done picking? Copy your answers and paste them to Lucas in Teams.</p>'
+    +'<div class="ck-acts"><button type="button" class="ck-btn" id="ckCopyMine">Copy my answers</button>'
+    +(n?'<button type="button" class="ck-btn is-ghost" id="ckClear">Clear my picks</button>':'')+'</div>';
 }
 function ckCounts(){
   var open=ckOpenN(), done=CHECK.length-open;
@@ -1943,32 +1989,52 @@ function ckRender(){
   var open=ckOpenN(), done=CHECK.length-open;
   $('ckSheet').innerHTML=
     '<div class="ck-head"><div class="ck-eb">Finsfree pilot · <b>Aaron\'s checklist</b> · Updated '+esc(nb(CK_DATE))+'</div><img class="ck-logo" src="'+logoSrc+'" alt="TMGM" width="132" height="33"></div>'
-    +'<h1 class="ck-title">'+(open?CHECK.length+' things for Aaron to confirm':'All '+CHECK.length+' confirmed by Aaron')+'</h1>'
-    +'<p class="ck-sub">In the order they come up on the flowchart. Each one shows our suggestion, so a quick yes, or a change, is enough.</p>'
-    +'<div class="ck-gw"><div class="ck-gh"><p class="ck-lh">At a glance</p><span class="ck-pg"><span><b>'+done+' of '+CHECK.length+'</b> confirmed</span><span class="ck-pg-bar" aria-hidden="true"><i style="width:'+Math.round(done/CHECK.length*100)+'%"></i></span></span></div>'
-    +'<ul class="ck-glance">'+ckGlance()+'</ul></div>'
+    +'<h1 class="ck-title">'+(open?CHECK.length+' quick questions for Aaron':'All '+CHECK.length+' confirmed by Aaron')+'</h1>'
+    +'<p class="ck-sub">Our suggestion is on the left of each. <b>Pick A, B, C or D on the right</b>, then copy your answers at the end and paste them to Lucas in Teams.</p>'
+    +'<div class="ck-pg"><span><b>'+done+' of '+CHECK.length+'</b> confirmed</span><span class="ck-pg-bar" aria-hidden="true"><i style="width:'+Math.round(done/CHECK.length*100)+'%"></i></span></div>'
     +'<div class="ck-cards">'+CHECK.map(ckCard).join('')+'</div>'
-    +'<div class="ck-foot"><span><b>Click a step</b> to see it on the flowchart. <b>Click any underlined word</b> to read and copy its note.</span><span>Sources: Aaron, Edwin and Fetra, 8 Oct to 11 Nov 2026</span></div>';
+    +(open?'<div class="ck-send" id="ckSend">'+ckSendHTML()+'</div>':'')
+    +'<div class="ck-foot"><span><b>Click a step number</b> to see it on the flowchart. <b>Click any underlined word</b> to read and copy its note.</span><span>Sources: Aaron, Edwin and Fetra, 8 Oct to 11 Nov 2026</span></div>';
   ckCounts();
 }
-/* plain text of the whole checklist, to paste into Teams or an email */
+function ckSetPick(n,k){
+  var it=null; CHECK.forEach(function(x){ if(x.n===n) it=x; });
+  if(!it||it.ans) return;
+  ckPicks[n]=k; ckSave();
+  Array.prototype.forEach.call(document.querySelectorAll('#ck-'+n+' .ck-o'),function(l){
+    var inp=l.querySelector('input'); l.classList.toggle('is-on',!!inp&&inp.value===k);
+  });
+  var m=$('ckm-'+n); if(m) m.textContent='You picked '+k;
+  var s=$('ckSend'); if(s) s.innerHTML=ckSendHTML();
+}
+function ckClear(){
+  ckPicks={}; ckSave();
+  Array.prototype.forEach.call(document.querySelectorAll('.ck-o input'),function(inp){ if(!inp.disabled){ inp.checked=false; inp.parentNode.classList.remove('is-on'); } });
+  Array.prototype.forEach.call(document.querySelectorAll('[id^="ckm-"]'),function(m){ m.textContent=''; });
+  var s=$('ckSend'); if(s) s.innerHTML=ckSendHTML();
+}
+/* plain text: the questions with our suggestion (to paste into Teams), or a viewer's own picks */
 function ckText(){
-  var L=['Finsfree pilot: '+CHECK.length+' things for Aaron to confirm (updated '+CK_DATE+')','Each one shows our suggestion, so a quick yes, or a change, is enough.',''];
+  var L=['Finsfree pilot: '+CHECK.length+' quick questions for Aaron (updated '+CK_DATE+')','Our suggestion is marked on each, so a quick reply like "1A, 2A" is enough.',''];
   CHECK.forEach(function(it){
     L.push(it.n+') '+it.q);
-    L.push('On the flowchart: '+it.steps.map(function(k){ var n=NM[k]; return (n.id||n.num)+' '+n.name; }).join(', '));
-    it.opts.forEach(function(o){ L.push(o.k+'. '+o.h+': '+o.t+(o.k===it.pick?' (our suggestion)':'')); });
-    if(it.plus) L.push(it.plus.h+': '+it.plus.t+' (our suggestion)');
-    L.push('Why we suggest '+it.pick+': '+it.rsn);
-    L.push(it.ans?'Aaron\'s answer: '+it.ans.pick+'. '+ckOpt(it,it.ans.pick).h+(it.ans.on?' ('+it.ans.on+')':'')+(it.ans.note?'. '+it.ans.note:''):'Aaron\'s answer: waiting');
+    it.all.forEach(function(o){ L.push(o.k+'. '+o.h+(o.k===it.pick?' (our suggestion)':'')+(it.ans&&it.ans.pick===o.k?' (Aaron\'s answer)':'')); });
     L.push('');
   });
   return L.join('\n').replace(/\s+$/,'');
 }
+function ckMine(){
+  var L=['My answers for the Finsfree checklist:'];
+  CHECK.forEach(function(it){
+    var k=it.ans?it.ans.pick:ckPicks[it.n], o=k?ckOpt(it,k):null;
+    L.push(it.n+') '+it.short+': '+(o?k+'. '+o.h:'not picked yet'));
+  });
+  return L.join('\n');
+}
 function ckToast(msg){ toast.textContent=msg; toast.hidden=false; clearTimeout(toastT); toastT=setTimeout(function(){ toast.hidden=true; },2600); }
-function ckCopy(btn){
-  var lab=btn.querySelector('span'), txt=ckText();
-  function done(){ lab.textContent='Copied'; setTimeout(function(){ lab.textContent='Copy as text'; },2000); }
+function ckCopyText(txt,btn,label){
+  var lab=btn.querySelector('span')||btn;
+  function done(){ lab.textContent='Copied'; setTimeout(function(){ lab.textContent=label; },2000); }
   function fallback(){
     var ta=document.createElement('textarea'), ok=false;
     ta.value=txt; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.left='-9999px'; ta.style.top='0';
@@ -2020,15 +2086,24 @@ tabSum.addEventListener('click',function(){ goView('summary'); });
 tabCk.addEventListener('click',function(){ goView('checklist'); });
 $('ckProg').addEventListener('click',function(){ goView('checklist'); });
 $('ckRailShow').addEventListener('click',function(){ setCollapsed(false,true); hideBtn.focus(); });
-$('ckCopy').addEventListener('click',function(){ ckCopy(this); });
+$('ckCopy').addEventListener('click',function(){ ckCopyText(ckText(),this,'Copy as text'); });
+document.addEventListener('change',function(ev){
+  var t=ev.target;
+  if(t&&t.name&&t.name.indexOf('ck-')===0&&t.type==='radio') ckSetPick(+t.name.slice(3),t.value);
+});
 document.addEventListener('click',function(ev){
   var t=ev.target; if(!t||!t.closest) return;
   var a=t.closest('.ck-link');
   if(a){ ev.preventDefault(); var n=+a.getAttribute('data-ck'); showView('checklist'); ckScrollTo(n,false); return; }
-  var g=t.closest('.ck-g');
-  if(g){ ckScrollTo(+g.getAttribute('data-ck'),true); return; }
   var s=t.closest('.ck-step');
-  if(s) ckOpenStep(s.getAttribute('data-step'));
+  if(s){ ckOpenStep(s.getAttribute('data-step')); return; }
+  var w=t.closest('.ck-why');
+  if(w){ var box=$(w.getAttribute('aria-controls')), op=w.getAttribute('aria-expanded')!=='true'; w.setAttribute('aria-expanded',String(op)); if(box) box.hidden=!op; return; }
+  if(t.closest('#ckCopyMine')){
+    if(!ckPickN()&&!CHECK.some(function(it){ return it.ans; })){ ckToast('Pick an answer first, then copy.'); return; }
+    ckCopyText(ckMine(),t.closest('#ckCopyMine'),'Copy my answers'); return;
+  }
+  if(t.closest('#ckClear')) ckClear();
 });
 function ckFromHash(){
   var h=String(location.hash||'').toLowerCase();
